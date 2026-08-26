@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data
+data/raw/*
+data/interim/*
+data/processed/*
+data/predictions/*
+
+# Keep directories
+!data/**/.gitkeep
+
+# Logs
+*.log
+
+# ML
+mlruns/
+artifacts/
+
+# Coverage
+.coverage
+htmlcov/
