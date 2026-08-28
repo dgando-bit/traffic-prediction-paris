@@ -14,6 +14,12 @@ FEATURE_COLUMNS = [
     "hour",
     "day_of_week",
     "is_weekend",
+
+    "is_public_holiday",
+    "is_day_before_public_holiday",
+    "is_day_after_public_holiday",
+    "is_school_holiday",
+
     "q_lag_1h",
     "k_lag_1h",
     "q_lag_2h",

@@ -9,32 +9,32 @@ from traffic_prediction.ingestion.traffic import (
 
 
 ROAD_IDS = [
-    "1586",
-    "4225",
-    "4596",
-    "5758",
-    "782",
-    "1",
-    "10",
-    "100",
-    "1001",
-    "1006",
-    "1007",
-    "101",
-    "1010",
-    "1011",
-    "1017",
-    "1018",
-    "1019",
-    "1020",
-    "1023",
-    "1024",
+    "4632",
+    "4634",
+    "1029",
+    "1030",
+    "1031",
+    "1032",
+    "1067",
+    "1072",
+    "4630",
+    "4633",
+    "4637",
+    "985",
+    "1033",
+    "1034",
+    "1111",
+    "1112",
+    "1222",
+    "1043",
+    "1044",
+    "1038",
 ]
 
-MAX_RECORDS_PER_ROAD = 1000
+MAX_RECORDS_PER_ROAD = 8000
 
 OUTPUT_PATH = Path(
-    "data/raw/traffic/traffic_multi_20.parquet"
+    "data/raw/traffic/traffic_multi_20_long.parquet"
 )
 
 

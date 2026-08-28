@@ -16,7 +16,7 @@ from traffic_prediction.models.train import (
 
 
 INPUT_PATH = (
-    "data/processed/ml_dataset_multi_20.parquet"
+    "data/processed/ml_dataset_multi_20_long.parquet"
 )
 
 

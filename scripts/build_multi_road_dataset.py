@@ -11,11 +11,11 @@ from traffic_prediction.features.ml_dataset import (
 
 
 INPUT_PATH = Path(
-    "data/interim/traffic_multi_20_clean.parquet"
+    "data/interim/traffic_multi_20_long_clean.parquet"
 )
 
 OUTPUT_PATH = Path(
-    "data/processed/ml_dataset_multi_20.parquet"
+    "data/processed/ml_dataset_multi_20_long.parquet"
 )
 
 

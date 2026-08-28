@@ -10,7 +10,10 @@ from traffic_prediction.features.traffic_features import (
     add_traffic_lag_features,
     add_traffic_target,
 )
-
+from traffic_prediction.features.calendar_features import (
+    add_public_holiday_features,
+    add_school_holiday_features,
+)
 
 logger = get_logger(__name__)
 
@@ -36,6 +39,14 @@ def build_traffic_features(
     # ------------------------------------------------------------------
 
     df = add_time_features(df)
+
+    # ------------------------------------------------------------------
+    # Holidays features
+    # ------------------------------------------------------------------
+
+    df = add_public_holiday_features(df)
+
+    df = add_school_holiday_features(df)
 
     # ------------------------------------------------------------------
     # Historical traffic features
