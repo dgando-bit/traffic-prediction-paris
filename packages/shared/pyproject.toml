@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "traffic-prediction-shared"
+version = "0.1.0"
+description = "Shared utilities and configuration for Traffic Prediction Paris."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+
+dependencies = [
+    "pydantic-settings>=2.7,<3.0",
+]
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shared*"]
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "UP",
+]
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

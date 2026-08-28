@@ -44,3 +44,5 @@ artifacts/
 # Coverage
 .coverage
 htmlcov/
+
+docs/
