@@ -16,6 +16,7 @@ dependencies = [
     "pandas>=2.2,<3.0",
     "pyarrow>=18,<22",
     "duckdb>=1.2,<2.0",
+    "scikit-learn>=1.6,<2.0",
 ]
 
 
