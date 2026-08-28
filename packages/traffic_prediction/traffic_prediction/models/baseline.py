@@ -27,10 +27,13 @@ def temporal_train_test_split(
     test_size: float = 0.2,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Split a time-series dataset chronologically.
+    Split a time-series dataset using a common timestamp cutoff.
 
-    The oldest observations are used for training and the
-    most recent observations for testing.
+    All observations before the cutoff belong to the training set.
+    All observations from the cutoff onward belong to the test set.
+
+    This prevents the same timestamp from appearing in both sets
+    when multiple road segments are present.
     """
     if not 0 < test_size < 1:
         raise ValueError(
@@ -42,30 +45,52 @@ def temporal_train_test_split(
             "Column 'timestamp_utc' is required."
         )
 
-    if len(df) < 2:
-        raise ValueError(
-            "At least 2 observations are required."
-        )
-
-    df = df.sort_values(
-        "timestamp_utc"
-    ).reset_index(drop=True)
-
-    split_index = int(
-        len(df) * (1 - test_size)
+    timestamps = (
+        df["timestamp_utc"]
+        .dropna()
+        .drop_duplicates()
+        .sort_values()
+        .reset_index(drop=True)
     )
 
-    train_df = df.iloc[:split_index].copy()
-    test_df = df.iloc[split_index:].copy()
+    if len(timestamps) < 2:
+        raise ValueError(
+            "At least 2 distinct timestamps are required."
+        )
+
+    split_index = int(
+        len(timestamps) * (1 - test_size)
+    )
+
+    split_index = min(
+        max(split_index, 1),
+        len(timestamps) - 1,
+    )
+
+    cutoff = timestamps.iloc[split_index]
+
+    train_df = (
+        df[df["timestamp_utc"] < cutoff]
+        .copy()
+        .sort_values(["timestamp_utc", "iu_ac"])
+        .reset_index(drop=True)
+    )
+
+    test_df = (
+        df[df["timestamp_utc"] >= cutoff]
+        .copy()
+        .sort_values(["timestamp_utc", "iu_ac"])
+        .reset_index(drop=True)
+    )
 
     logger.info(
-        "Temporal split: %s train rows / %s test rows",
+        "Temporal split at %s: %s train rows / %s test rows",
+        cutoff,
         len(train_df),
         len(test_df),
     )
 
     return train_df, test_df
-
 
 def evaluate_persistence_baseline(
     test_df: pd.DataFrame,

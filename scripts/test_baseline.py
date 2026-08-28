@@ -97,7 +97,7 @@ def main() -> None:
 
     assert (
         train_df["timestamp_utc"].max()
-        <= test_df["timestamp_utc"].min()
+        < test_df["timestamp_utc"].min()
     )
 
     assert metrics.mae >= 0
