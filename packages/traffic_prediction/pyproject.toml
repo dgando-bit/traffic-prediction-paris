@@ -19,6 +19,7 @@ dependencies = [
     "scikit-learn>=1.6,<2.0",
     "holidays>=0.60,<1.0",
     "lightgbm>=4.6,<5.0",
+    "mlflow>=3.0,<4.0",
 ]
 
 
