@@ -18,6 +18,7 @@ dependencies = [
     "duckdb>=1.2,<2.0",
     "scikit-learn>=1.6,<2.0",
     "holidays>=0.60,<1.0",
+    "lightgbm>=4.6,<5.0",
 ]
 
 
