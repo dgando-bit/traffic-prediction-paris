@@ -14,12 +14,16 @@ from traffic_prediction.features.calendar_features import (
     add_public_holiday_features,
     add_school_holiday_features,
 )
+from traffic_prediction.features.weather_features import (
+    add_weather_features,
+)
 
 logger = get_logger(__name__)
 
 
 def build_traffic_features(
     df: pd.DataFrame,
+    weather_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """
     Build the V0 traffic feature set.
@@ -47,6 +51,15 @@ def build_traffic_features(
     df = add_public_holiday_features(df)
 
     df = add_school_holiday_features(df)
+
+    # ------------------------------------------------------------------
+    # Merge weather features
+    # ------------------------------------------------------------------
+    if weather_df is not None:
+        df = add_weather_features(
+            df,
+            weather_df,
+        )
 
     # ------------------------------------------------------------------
     # Historical traffic features

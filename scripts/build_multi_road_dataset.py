@@ -13,6 +13,9 @@ from traffic_prediction.features.ml_dataset import (
 INPUT_PATH = Path(
     "data/interim/traffic_multi_20_long_clean.parquet"
 )
+WEATHER_PATH = Path(
+    "data/raw/weather/weather_paris_historical.parquet"
+)
 
 OUTPUT_PATH = Path(
     "data/processed/ml_dataset_multi_20_long.parquet"
@@ -38,16 +41,50 @@ def main() -> None:
     )
 
     # ---------------------------------------------------------------
+    # Load weather data
+    # ---------------------------------------------------------------
+
+    weather_df = pd.read_parquet(
+        WEATHER_PATH
+    )
+
+    print()
+    print("=== Weather dataset ===")
+    print(f"Rows : {len(weather_df)}")
+
+    print(
+        "Period:",
+        weather_df["timestamp_utc"].min(),
+        "->",
+        weather_df["timestamp_utc"].max(),
+    )
+
+    # ---------------------------------------------------------------
     # Feature engineering
     # ---------------------------------------------------------------
 
-    df_features = build_traffic_features(df)
+    df_features = build_traffic_features(
+        df,
+        weather_df=weather_df,
+    )
 
     print()
     print("=== Feature engineering ===")
 
     print(f"Rows  : {len(df_features)}")
     print(f"Roads : {df_features['iu_ac'].nunique()}")
+
+    weather_columns = [
+        "temperature_2m_target_1h",
+        "relative_humidity_2m_target_1h",
+        "precipitation_target_1h",
+        "rain_target_1h",
+        "wind_speed_10m_target_1h",
+        "weather_code_target_1h",
+    ]
+
+    print()
+    print("Missing weather values:")
 
     lag_columns = [
         "q_lag_1h",
@@ -57,6 +94,12 @@ def main() -> None:
         "q_lag_24h",
         "k_lag_24h",
     ]
+
+    print(
+        df_features[
+            weather_columns
+        ].isna().sum()
+    )
 
     print()
     print("Missing lag values:")

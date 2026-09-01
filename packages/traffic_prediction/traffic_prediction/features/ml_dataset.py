@@ -9,23 +9,30 @@ logger = get_logger(__name__)
 
 
 FEATURE_COLUMNS = [
+    # Current traffic
     "q",
     "k",
+
+    # Time
     "hour",
     "day_of_week",
     "is_weekend",
 
-    "is_public_holiday",
-    "is_day_before_public_holiday",
-    "is_day_after_public_holiday",
-    "is_school_holiday",
-
+    # Traffic history
     "q_lag_1h",
     "k_lag_1h",
     "q_lag_2h",
     "k_lag_2h",
     "q_lag_24h",
     "k_lag_24h",
+
+    # Weather
+    "temperature_2m_target_1h",
+    "relative_humidity_2m_target_1h",
+    "precipitation_target_1h",
+    "rain_target_1h",
+    "wind_speed_10m_target_1h",
+    "weather_code_target_1h",
 ]
 
 TARGET_COLUMN = "target_k_1h"
