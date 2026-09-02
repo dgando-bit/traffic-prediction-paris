@@ -13,8 +13,13 @@ from traffic_prediction.features.ml_dataset import (
 INPUT_PATH = Path(
     "data/interim/traffic_multi_20_long_clean.parquet"
 )
+
 WEATHER_PATH = Path(
     "data/raw/weather/weather_paris_historical.parquet"
+)
+
+ROAD_REFERENCE_PATH = Path(
+    "data/raw/reference/road_reference.parquet"
 )
 
 OUTPUT_PATH = Path(
@@ -24,7 +29,7 @@ OUTPUT_PATH = Path(
 
 def main() -> None:
     # ---------------------------------------------------------------
-    # Load processed data
+    # Load processed traffic data
     # ---------------------------------------------------------------
 
     df = pd.read_parquet(INPUT_PATH)
@@ -60,19 +65,43 @@ def main() -> None:
     )
 
     # ---------------------------------------------------------------
+    # Load road reference data
+    # ---------------------------------------------------------------
+
+    road_reference_df = pd.read_parquet(
+        ROAD_REFERENCE_PATH
+    )
+
+    print()
+    print("=== Road reference dataset ===")
+    print(f"Rows  : {len(road_reference_df)}")
+    print(
+        f"Roads : "
+        f"{road_reference_df['iu_ac'].nunique()}"
+    )
+
+    # ---------------------------------------------------------------
     # Feature engineering
     # ---------------------------------------------------------------
 
     df_features = build_traffic_features(
         df,
         weather_df=weather_df,
+        road_reference_df=road_reference_df,
     )
 
     print()
     print("=== Feature engineering ===")
 
     print(f"Rows  : {len(df_features)}")
-    print(f"Roads : {df_features['iu_ac'].nunique()}")
+    print(
+        f"Roads : "
+        f"{df_features['iu_ac'].nunique()}"
+    )
+
+    # ---------------------------------------------------------------
+    # Weather validation
+    # ---------------------------------------------------------------
 
     weather_columns = [
         "temperature_2m_target_1h",
@@ -86,6 +115,35 @@ def main() -> None:
     print()
     print("Missing weather values:")
 
+    print(
+        df_features[
+            weather_columns
+        ].isna().sum()
+    )
+
+    # ---------------------------------------------------------------
+    # Road context validation
+    # ---------------------------------------------------------------
+
+    road_columns = [
+        "latitude",
+        "longitude",
+        "road_length_m",
+    ]
+
+    print()
+    print("Missing road features:")
+
+    print(
+        df_features[
+            road_columns
+        ].isna().sum()
+    )
+
+    # ---------------------------------------------------------------
+    # Lag validation
+    # ---------------------------------------------------------------
+
     lag_columns = [
         "q_lag_1h",
         "k_lag_1h",
@@ -94,12 +152,6 @@ def main() -> None:
         "q_lag_24h",
         "k_lag_24h",
     ]
-
-    print(
-        df_features[
-            weather_columns
-        ].isna().sum()
-    )
 
     print()
     print("Missing lag values:")
@@ -111,6 +163,7 @@ def main() -> None:
     )
 
     print()
+
     print(
         "Available targets:",
         df_features[
@@ -188,18 +241,28 @@ def main() -> None:
         )
     )
 
-    input_roads = set(df["iu_ac"].unique())
-    ml_roads = set(ml_dataset["iu_ac"].unique())
+    input_roads = set(
+        df["iu_ac"].astype(str).unique()
+    )
+
+    ml_roads = set(
+        ml_dataset["iu_ac"].astype(str).unique()
+    )
 
     excluded_roads = sorted(
         input_roads - ml_roads
     )
 
     print()
-    print("Roads excluded from ML dataset:")
+    print(
+        "Roads excluded from ML dataset:"
+    )
 
-    for iu_ac in excluded_roads:
-        print(f"  - {iu_ac}")
+    if excluded_roads:
+        for iu_ac in excluded_roads:
+            print(f"  - {iu_ac}")
+    else:
+        print("None")
 
     # ---------------------------------------------------------------
     # Validation
@@ -208,9 +271,9 @@ def main() -> None:
     assert len(ml_dataset) > 0
 
     assert (
-            1
-            < ml_dataset["iu_ac"].nunique()
-            <= df["iu_ac"].nunique()
+        1
+        < ml_dataset["iu_ac"].nunique()
+        <= df["iu_ac"].nunique()
     )
 
     assert (
@@ -222,6 +285,15 @@ def main() -> None:
     assert (
         len(ml_dataset)
         <= len(df_features)
+    )
+
+    assert (
+        ml_dataset[
+            road_columns
+        ]
+        .notna()
+        .all()
+        .all()
     )
 
     print()

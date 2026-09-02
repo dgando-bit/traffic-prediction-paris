@@ -35,6 +35,12 @@ FEATURE_COLUMNS = [
     "weather_code_target_1h",
 ]
 
+ROAD_CONTEXT_COLUMNS = [
+    "latitude",
+    "longitude",
+    "road_length_m",
+]
+
 TARGET_COLUMN = "target_k_1h"
 
 
@@ -42,18 +48,19 @@ def build_ml_dataset(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Build the V0 supervised ML dataset.
+    Build the supervised ML dataset.
 
     Rows without a target are removed because they cannot
     participate in supervised training.
 
-    Missing lag values are kept for now so that the model
+    Missing feature values are kept so that the model
     preparation step can decide how to handle them.
     """
     required_columns = {
         "iu_ac",
         "timestamp_utc",
         *FEATURE_COLUMNS,
+        *ROAD_CONTEXT_COLUMNS,
         TARGET_COLUMN,
     }
 
@@ -69,6 +76,7 @@ def build_ml_dataset(
             "iu_ac",
             "timestamp_utc",
             *FEATURE_COLUMNS,
+            *ROAD_CONTEXT_COLUMNS,
             TARGET_COLUMN,
         ]
     ].copy()
@@ -83,9 +91,11 @@ def build_ml_dataset(
     ).reset_index(drop=True)
 
     logger.info(
-        "ML dataset created: %s rows, %s features",
+        "ML dataset created: %s rows, %s ML features "
+        "+ %s road context columns",
         len(dataset),
         len(FEATURE_COLUMNS),
+        len(ROAD_CONTEXT_COLUMNS),
     )
 
     return dataset
