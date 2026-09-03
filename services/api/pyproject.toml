@@ -1,0 +1,22 @@
+[project]
+name = "traffic-prediction-api"
+version = "0.1.0"
+description = "REST API for Paris traffic predictions"
+requires-python = ">=3.12"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+]
+
+[project.scripts]
+traffic-api = "api_service.main:run"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -204,3 +204,50 @@ def get_latest_traffic_timestamp(
     )
 
     return session.scalar(statement)
+
+def get_latest_predictions(
+    session: Session,
+) -> list[Prediction]:
+    latest_target = session.scalar(
+        select(
+            func.max(
+                Prediction.target_timestamp_utc
+            )
+        )
+    )
+
+    if latest_target is None:
+        return []
+
+    statement = (
+        select(Prediction)
+        .where(
+            Prediction.target_timestamp_utc
+            == latest_target
+        )
+        .order_by(
+            Prediction.iu_ac
+        )
+    )
+
+    return list(
+        session.scalars(statement)
+    )
+
+
+def get_latest_prediction_for_road(
+    session: Session,
+    iu_ac: str,
+) -> Prediction | None:
+    statement = (
+        select(Prediction)
+        .where(
+            Prediction.iu_ac == iu_ac
+        )
+        .order_by(
+            Prediction.target_timestamp_utc.desc()
+        )
+        .limit(1)
+    )
+
+    return session.scalar(statement)
