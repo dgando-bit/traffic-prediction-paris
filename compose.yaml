@@ -1,37 +1,41 @@
 services:
+    # ----------- POSTGRES ------------
     postgres:
         image: postgres:17
+        
         environment:
-            POSTGRES_USER: traffic
-            POSTGRES_PASSWORD: traffic
-            POSTGRES_DB: traffic_prediction
+            POSTGRES_USER: ${TP_POSTGRES_USER}
+            POSTGRES_PASSWORD: ${TP_POSTGRES_PASSWORD}
+            POSTGRES_DB: ${TP_POSTGRES_DB}
+        
         ports:
-            - "5432:5432"
+            - "${TP_POSTGRES_PORT}:5432"
+        
         volumes:
             - postgres_data:/var/lib/postgresql/data
+        
         healthcheck:
             test:
               [
                   "CMD-SHELL",
-                  "pg_isready -U traffic -d traffic_prediction"
+                  "pg_isready -U ${TP_POSTGRES_USER} -d ${TP_POSTGRES_DB}"
               ]
             interval: 5s
             timeout: 5s
             retries: 5
-
-#----------- API ------------
+    
+    # ----------- API ------------
     api:
         build:
             context: .
             dockerfile: services/api/Dockerfile
+        
         environment:
-            TP_POSTGRES_USER: traffic
-            TP_POSTGRES_PASSWORD: traffic
             TP_POSTGRES_HOST: postgres
-            TP_POSTGRES_PORT: 5432
-            TP_POSTGRES_DB: traffic_prediction
+        
         ports:
             - "8000:8000"
+        
         depends_on:
             postgres:
                 condition: service_healthy
