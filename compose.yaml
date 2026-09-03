@@ -19,5 +19,22 @@ services:
             timeout: 5s
             retries: 5
 
+#----------- API ------------
+    api:
+        build:
+            context: .
+            dockerfile: services/api/Dockerfile
+        environment:
+            TP_POSTGRES_USER: traffic
+            TP_POSTGRES_PASSWORD: traffic
+            TP_POSTGRES_HOST: postgres
+            TP_POSTGRES_PORT: 5432
+            TP_POSTGRES_DB: traffic_prediction
+        ports:
+            - "8000:8000"
+        depends_on:
+            postgres:
+                condition: service_healthy
+
 volumes:
     postgres_data:
