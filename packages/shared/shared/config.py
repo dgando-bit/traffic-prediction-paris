@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     http_timeout: float = 30.0
     api_page_size: int = 100
 
+    # Database connection
+    postgres_user: str = "traffic"
+    postgres_password: str = "traffic"
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str = "traffic_prediction"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -1,0 +1,23 @@
+[project]
+name = "traffic-prediction-training"
+version = "0.1.0"
+description = "Training service for Paris traffic prediction"
+requires-python = ">=3.12"
+
+dependencies = [
+    "pandas",
+    "pyarrow",
+    "lightgbm",
+    "scikit-learn",
+    "mlflow",
+]
+
+[project.scripts]
+train-model = "training_service.train:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
