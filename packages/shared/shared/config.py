@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     postgres_db: str = "traffic_prediction"
 
+    # Mlflow
+    mlflow_tracking_uri: str = "http://mlflow:5000"
+
+    registered_model_name: str = "paris-traffic-predictor"
+    trained_model_alias: str = "candidate"
+    api_model_alias: str = "champion"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

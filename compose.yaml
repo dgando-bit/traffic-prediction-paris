@@ -4,17 +4,29 @@ x-airflow-common: &airflow-common
         dockerfile: services/airflow/Dockerfile
     
     environment: &airflow-common-env
+        # ---------------- AIRFLOW ----------------
         AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-postgres:5432/${AIRFLOW_DB_NAME}
         
         AIRFLOW__CORE__EXECUTOR: LocalExecutor
         
         AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
         
+        # ---------------- APPLICATION DATABASE ----------------
         TP_POSTGRES_USER: ${TP_POSTGRES_USER}
         TP_POSTGRES_PASSWORD: ${TP_POSTGRES_PASSWORD}
         TP_POSTGRES_HOST: postgres
         TP_POSTGRES_PORT: 5432
         TP_POSTGRES_DB: ${TP_POSTGRES_DB}
+        
+        # ---------------- MLFLOW ----------------
+        # Native MLflow environment variable
+        MLFLOW_TRACKING_URI: http://mlflow-srv:5000
+        
+        # Application configuration
+        TP_MLFLOW_TRACKING_URI: http://mlflow-srv:5000
+        TP_REGISTERED_MODEL_NAME: ${TP_REGISTERED_MODEL_NAME}
+        TP_TRAINED_MODEL_ALIAS: ${TP_TRAINED_MODEL_ALIAS}
+        TP_API_MODEL_ALIAS: ${TP_API_MODEL_ALIAS}
     
     volumes:
         - ./services/airflow/dags:/opt/airflow/dags
@@ -22,8 +34,12 @@ x-airflow-common: &airflow-common
         - ./services/airflow/plugins:/opt/airflow/plugins
         - ./data:/opt/airflow/data
 
+
 services:
-    # ----------- POSTGRES ------------
+    
+    # ==========================================================
+    # POSTGRES - APPLICATION + MLFLOW
+    # ==========================================================
     postgres:
         image: postgres:17
         
@@ -48,14 +64,60 @@ services:
             timeout: 5s
             retries: 5
     
-    # ----------- API ------------
+    
+    # ==========================================================
+    # MLFLOW
+    # ==========================================================
+    mlflow-srv:
+        build:
+            context: .
+            dockerfile: services/mlflow/Dockerfile
+        
+        command:
+            - mlflow
+            - server
+            - --host
+            - 0.0.0.0
+            - --port
+            - "5000"
+            - --backend-store-uri
+            - postgresql+psycopg2://${MLFLOW_DB_USER}:${MLFLOW_DB_PASSWORD}@postgres:5432/${MLFLOW_DB_NAME}
+            - --artifacts-destination
+            - /mlartifacts
+        
+        ports:
+            - "${MLFLOW_PORT}:5000"
+        
+        volumes:
+            - mlflow_artifacts:/mlartifacts
+        
+        depends_on:
+            postgres:
+                condition: service_healthy
+    
+    
+    # ==========================================================
+    # API
+    # ==========================================================
     api:
         build:
             context: .
             dockerfile: services/api/Dockerfile
         
         environment:
+            # Application database
+            TP_POSTGRES_USER: ${TP_POSTGRES_USER}
+            TP_POSTGRES_PASSWORD: ${TP_POSTGRES_PASSWORD}
             TP_POSTGRES_HOST: postgres
+            TP_POSTGRES_PORT: 5432
+            TP_POSTGRES_DB: ${TP_POSTGRES_DB}
+            
+            # MLflow
+            MLFLOW_TRACKING_URI: http://mlflow-srv:5000
+            TP_MLFLOW_TRACKING_URI: http://mlflow-srv:5000
+            
+            TP_REGISTERED_MODEL_NAME: ${TP_REGISTERED_MODEL_NAME}
+            TP_API_MODEL_ALIAS: ${TP_API_MODEL_ALIAS}
         
         ports:
             - "8000:8000"
@@ -63,8 +125,14 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+            
+            mlflow-srv:
+                condition: service_started
     
-    # ----------- AIRFLOW POSTGRES ------------
+    
+    # ==========================================================
+    # AIRFLOW POSTGRES
+    # ==========================================================
     airflow-postgres:
         image: postgres:17
         
@@ -86,12 +154,16 @@ services:
             timeout: 5s
             retries: 5
     
-    # ----------- AIRFLOW INIT ------------
+    
+    # ==========================================================
+    # AIRFLOW INIT
+    # ==========================================================
     airflow-init:
         <<: *airflow-common
         
         environment:
             <<: *airflow-common-env
+            
             AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME}
             AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
             AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL}
@@ -104,7 +176,10 @@ services:
             - bash
             - -c
             - |
-                airflow db migrate &&
+                set -e
+                
+                airflow db migrate
+                
                 airflow users create \
                   --username "$AIRFLOW_ADMIN_USERNAME" \
                   --password "$AIRFLOW_ADMIN_PASSWORD" \
@@ -113,10 +188,11 @@ services:
                   --role Admin \
                   --email "$AIRFLOW_ADMIN_EMAIL" \
                 || echo "Airflow admin user already exists."
-
-
     
-    # ----------- AIRFLOW API SERVER ------------
+    
+    # ==========================================================
+    # AIRFLOW API SERVER
+    # ==========================================================
     airflow-apiserver:
         <<: *airflow-common
         
@@ -128,10 +204,17 @@ services:
         depends_on:
             airflow-postgres:
                 condition: service_healthy
+            
             postgres:
                 condition: service_healthy
+            
+            mlflow-srv:
+                condition: service_started
     
-    # ----------- AIRFLOW SCHEDULER ------------
+    
+    # ==========================================================
+    # AIRFLOW SCHEDULER
+    # ==========================================================
     airflow-scheduler:
         <<: *airflow-common
         
@@ -140,10 +223,17 @@ services:
         depends_on:
             airflow-postgres:
                 condition: service_healthy
+            
             postgres:
                 condition: service_healthy
+            
+            mlflow-srv:
+                condition: service_started
     
-    # ----------- AIRFLOW DAG PROCESSOR ------------
+    
+    # ==========================================================
+    # AIRFLOW DAG PROCESSOR
+    # ==========================================================
     airflow-dag-processor:
         <<: *airflow-common
         
@@ -152,9 +242,18 @@ services:
         depends_on:
             airflow-postgres:
                 condition: service_healthy
+            
             postgres:
                 condition: service_healthy
+            
+            mlflow-srv:
+                condition: service_started
 
+
+# ==============================================================
+# VOLUMES
+# ==============================================================
 volumes:
     postgres_data:
     airflow_postgres_data:
+    mlflow_artifacts:
