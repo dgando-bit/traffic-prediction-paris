@@ -1,3 +1,27 @@
+x-airflow-common: &airflow-common
+    build:
+        context: .
+        dockerfile: services/airflow/Dockerfile
+    
+    environment: &airflow-common-env
+        AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-postgres:5432/${AIRFLOW_DB_NAME}
+        
+        AIRFLOW__CORE__EXECUTOR: LocalExecutor
+        
+        AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+        
+        TP_POSTGRES_USER: ${TP_POSTGRES_USER}
+        TP_POSTGRES_PASSWORD: ${TP_POSTGRES_PASSWORD}
+        TP_POSTGRES_HOST: postgres
+        TP_POSTGRES_PORT: 5432
+        TP_POSTGRES_DB: ${TP_POSTGRES_DB}
+    
+    volumes:
+        - ./services/airflow/dags:/opt/airflow/dags
+        - ./services/airflow/logs:/opt/airflow/logs
+        - ./services/airflow/plugins:/opt/airflow/plugins
+        - ./data:/opt/airflow/data
+
 services:
     # ----------- POSTGRES ------------
     postgres:
@@ -39,6 +63,98 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+    
+    # ----------- AIRFLOW POSTGRES ------------
+    airflow-postgres:
+        image: postgres:17
+        
+        environment:
+            POSTGRES_USER: ${AIRFLOW_DB_USER}
+            POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD}
+            POSTGRES_DB: ${AIRFLOW_DB_NAME}
+        
+        volumes:
+            - airflow_postgres_data:/var/lib/postgresql/data
+        
+        healthcheck:
+            test:
+              [
+                  "CMD-SHELL",
+                  "pg_isready -U ${AIRFLOW_DB_USER} -d ${AIRFLOW_DB_NAME}"
+              ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+    
+    # ----------- AIRFLOW INIT ------------
+    airflow-init:
+        <<: *airflow-common
+        
+        environment:
+            <<: *airflow-common-env
+            AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME}
+            AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+            AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL}
+        
+        depends_on:
+            airflow-postgres:
+                condition: service_healthy
+        
+        command:
+            - bash
+            - -c
+            - |
+                airflow db migrate &&
+                airflow users create \
+                  --username "$AIRFLOW_ADMIN_USERNAME" \
+                  --password "$AIRFLOW_ADMIN_PASSWORD" \
+                  --firstname Admin \
+                  --lastname User \
+                  --role Admin \
+                  --email "$AIRFLOW_ADMIN_EMAIL" \
+                || echo "Airflow admin user already exists."
+
+
+    
+    # ----------- AIRFLOW API SERVER ------------
+    airflow-apiserver:
+        <<: *airflow-common
+        
+        command: api-server
+        
+        ports:
+            - "8080:8080"
+        
+        depends_on:
+            airflow-postgres:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
+    
+    # ----------- AIRFLOW SCHEDULER ------------
+    airflow-scheduler:
+        <<: *airflow-common
+        
+        command: scheduler
+        
+        depends_on:
+            airflow-postgres:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
+    
+    # ----------- AIRFLOW DAG PROCESSOR ------------
+    airflow-dag-processor:
+        <<: *airflow-common
+        
+        command: dag-processor
+        
+        depends_on:
+            airflow-postgres:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
 
 volumes:
     postgres_data:
+    airflow_postgres_data:
