@@ -2,6 +2,11 @@ FROM apache/airflow:3.3.1-python3.12
 
 USER root
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY packages/shared /opt/airflow/packages/shared
 COPY packages/traffic_prediction /opt/airflow/packages/traffic_prediction
 
