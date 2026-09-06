@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import Any
 
 from airflow.sdk import dag, task
 
-from traffic_prediction.pipelines.traffic_ingestion import (
-    run_incremental_ingestion,
-)
 from traffic_prediction.pipelines.dataset import (
     make_training_dataset,
 )
 from traffic_prediction.pipelines.features import (
     build_training_features,
+)
+from traffic_prediction.pipelines.traffic_ingestion import (
+    run_incremental_ingestion,
 )
 from traffic_prediction.pipelines.training import (
     train_and_register_model,
@@ -22,59 +25,141 @@ from traffic_prediction.pipelines.training import (
     schedule=None,
     start_date=datetime(2026, 1, 1),
     catchup=False,
-    tags=["traffic", "training", "mlflow", "paris"],
+    tags=[
+        "traffic",
+        "training",
+        "mlflow",
+        "paris",
+    ],
 )
 def traffic_training_pipeline():
 
     @task
     def ingestion() -> int:
-        return run_incremental_ingestion()
+        """
+        Fetch new traffic observations and persist them
+        into PostgreSQL.
+        """
+        inserted_rows = run_incremental_ingestion()
+
+        print(
+            f"Ingestion completed: "
+            f"{inserted_rows} observations processed"
+        )
+
+        return inserted_rows
 
     @task
-    def make_dataset() -> str:
+    def make_dataset(
+        ingestion_result: int,
+    ) -> str:
+        """
+        Extract the training history from PostgreSQL and
+        create the interim training dataset.
+
+        ingestion_result is intentionally received so that
+        Airflow creates an explicit dependency on ingestion.
+        """
+        print(
+            f"Ingestion result received: "
+            f"{ingestion_result}"
+        )
+
         path = make_training_dataset()
+
+        print(
+            f"Training dataset created: {path}"
+        )
+
         return str(path)
 
     @task
-    def build_features(dataset_path: str) -> str:
+    def build_features(
+        dataset_path: str,
+    ) -> str:
+        """
+        Build the 14 features used by the final model.
+        """
         path = build_training_features(
             input_path=dataset_path,
         )
+
+        print(
+            f"Training features created: {path}"
+        )
+
         return str(path)
 
     @task
-    def train_model(features_path: str) -> dict:
-        return train_and_register_model(
+    def train_model(
+        features_path: str,
+    ) -> dict[str, Any]:
+        """
+        Train LightGBM, log the run to MLflow and register
+        the new model version as @candidate.
+        """
+        result = train_and_register_model(
             dataset_path=features_path,
         )
 
+        return result
+
     @task
-    def notify(training_result: dict) -> None:
-        print("Training pipeline completed")
+    def notify(
+        training_result: dict[str, Any],
+    ) -> None:
+        """
+        Initial notification task.
+
+        For now the training summary is written to the Airflow
+        logs. A real notification channel can be added later.
+        """
+        print()
+        print("================================")
+        print(" Traffic training completed")
+        print("================================")
+
         print(
-            f"Model: "
-            f"{training_result['registered_model_name']}"
+            "Model:",
+            training_result[
+                "registered_model_name"
+            ],
         )
+
         print(
-            f"Version: "
-            f"{training_result['model_version']}"
+            "Version:",
+            training_result[
+                "model_version"
+            ],
         )
+
         print(
-            f"Alias: "
-            f"{training_result['alias']}"
+            "Alias:",
+            training_result["alias"],
         )
+
         print(
-            f"MAE: "
-            f"{training_result['mae']:.4f}"
+            "Run ID:",
+            training_result["run_id"],
         )
+
         print(
-            f"RMSE: "
-            f"{training_result['rmse']:.4f}"
+            "MAE:",
+            f"{training_result['mae']:.4f}",
         )
+
+        print(
+            "RMSE:",
+            f"{training_result['rmse']:.4f}",
+        )
+
+        print("================================")
 
     ingestion_result = ingestion()
 
-    dataset_path = make_dataset()
+    dataset_path = make_dataset(
+        ingestion_result
+    )
 
     features_path = build_features(
         dataset_path
@@ -84,12 +169,9 @@ def traffic_training_pipeline():
         features_path
     )
 
-    notification = notify(
+    notify(
         training_result
     )
-
-    ingestion_result >> dataset_path
-    notification
 
 
 traffic_training_pipeline()
