@@ -1,0 +1,28 @@
+services:
+    
+    airflow-apiserver:
+        volumes:
+            - ./services/airflow/dags:/opt/airflow/dags
+            - ./data:/opt/airflow/data
+            
+            # Development source code
+            - ./packages/shared/shared:/home/airflow/.local/lib/python3.12/site-packages/shared
+            - ./packages/traffic_prediction/traffic_prediction:/home/airflow/.local/lib/python3.12/site-packages/traffic_prediction
+    
+    airflow-scheduler:
+        volumes:
+            - ./services/airflow/dags:/opt/airflow/dags
+            - ./data:/opt/airflow/data
+            
+            # Development source code
+            - ./packages/shared/shared:/home/airflow/.local/lib/python3.12/site-packages/shared
+            - ./packages/traffic_prediction/traffic_prediction:/home/airflow/.local/lib/python3.12/site-packages/traffic_prediction
+    
+    airflow-dag-processor:
+        volumes:
+            - ./services/airflow/dags:/opt/airflow/dags
+            - ./data:/opt/airflow/data
+            
+            # Development source code
+            - ./packages/shared/shared:/home/airflow/.local/lib/python3.12/site-packages/shared
+            - ./packages/traffic_prediction/traffic_prediction:/home/airflow/.local/lib/python3.12/site-packages/traffic_prediction
