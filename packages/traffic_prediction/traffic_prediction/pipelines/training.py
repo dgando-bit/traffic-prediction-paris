@@ -14,7 +14,9 @@ from traffic_prediction.models.evaluate import evaluate_regression
 from traffic_prediction.models.lightgbm import train_lightgbm
 
 
-DATASET_PATH = Path("data/processed/ml_dataset_multi_20_long.parquet")
+DATASET_PATH = Path(
+    "data/processed/training_features.parquet"
+)
 
 EXPERIMENT_NAME = "traffic-prediction-v3"
 
