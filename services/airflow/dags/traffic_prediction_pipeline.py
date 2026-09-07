@@ -11,6 +11,9 @@ from traffic_prediction.pipelines.dataset import (
 from traffic_prediction.pipelines.features import (
     build_training_features,
 )
+from traffic_prediction.pipelines.promotion import (
+    promote_candidate,
+)
 from traffic_prediction.pipelines.traffic_ingestion import (
     run_incremental_ingestion,
 )
@@ -25,6 +28,7 @@ from traffic_prediction.pipelines.training import (
     schedule=None,
     start_date=datetime(2026, 1, 1),
     catchup=False,
+    max_active_runs=1,
     tags=[
         "traffic",
         "training",
@@ -36,10 +40,6 @@ def traffic_training_pipeline():
 
     @task
     def ingestion() -> int:
-        """
-        Fetch new traffic observations and persist them
-        into PostgreSQL.
-        """
         inserted_rows = run_incremental_ingestion()
 
         print(
@@ -53,13 +53,6 @@ def traffic_training_pipeline():
     def make_dataset(
         ingestion_result: int,
     ) -> str:
-        """
-        Extract the training history from PostgreSQL and
-        create the interim training dataset.
-
-        ingestion_result is intentionally received so that
-        Airflow creates an explicit dependency on ingestion.
-        """
         print(
             f"Ingestion result received: "
             f"{ingestion_result}"
@@ -77,9 +70,6 @@ def traffic_training_pipeline():
     def build_features(
         dataset_path: str,
     ) -> str:
-        """
-        Build the 14 features used by the final model.
-        """
         path = build_training_features(
             input_path=dataset_path,
         )
@@ -94,10 +84,6 @@ def traffic_training_pipeline():
     def train_model(
         features_path: str,
     ) -> dict[str, Any]:
-        """
-        Train LightGBM, log the run to MLflow and register
-        the new model version as @candidate.
-        """
         result = train_and_register_model(
             dataset_path=features_path,
         )
@@ -105,19 +91,42 @@ def traffic_training_pipeline():
         return result
 
     @task
+    def quality_gate(
+        features_path: str,
+        training_result: dict[str, Any],
+    ) -> dict[str, Any]:
+        print(
+            "Evaluating newly trained candidate..."
+        )
+
+        print(
+            "Candidate version:",
+            training_result["model_version"],
+        )
+
+        result = promote_candidate(
+            dataset_path=features_path,
+            metric="mae",
+            min_improvement_pct=1.0,
+        )
+
+        return result
+
+    @task
     def notify(
         training_result: dict[str, Any],
+        promotion_result: dict[str, Any],
     ) -> None:
-        """
-        Initial notification task.
-
-        For now the training summary is written to the Airflow
-        logs. A real notification channel can be added later.
-        """
         print()
-        print("================================")
-        print(" Traffic training completed")
-        print("================================")
+        print(
+            "================================"
+        )
+        print(
+            " Traffic training completed"
+        )
+        print(
+            "================================"
+        )
 
         print(
             "Model:",
@@ -127,15 +136,52 @@ def traffic_training_pipeline():
         )
 
         print(
-            "Version:",
-            training_result[
-                "model_version"
+            "Candidate version:",
+            promotion_result[
+                "candidate_version"
             ],
         )
 
         print(
-            "Alias:",
-            training_result["alias"],
+            "Champion version:",
+            promotion_result[
+                "champion_version"
+            ],
+        )
+
+        print(
+            "Training MAE:",
+            f"{training_result['mae']:.4f}",
+        )
+
+        print(
+            "Training RMSE:",
+            f"{training_result['rmse']:.4f}",
+        )
+
+        print(
+            "Quality gate:",
+            (
+                "PROMOTED"
+                if promotion_result["promoted"]
+                else "REJECTED"
+            ),
+        )
+
+        if (
+            promotion_result.get(
+                "improvement_pct"
+            )
+            is not None
+        ):
+            print(
+                "Improvement:",
+                f"{promotion_result['improvement_pct']:+.2f}%",
+            )
+
+        print(
+            "Reason:",
+            promotion_result["reason"],
         )
 
         print(
@@ -144,16 +190,8 @@ def traffic_training_pipeline():
         )
 
         print(
-            "MAE:",
-            f"{training_result['mae']:.4f}",
+            "================================"
         )
-
-        print(
-            "RMSE:",
-            f"{training_result['rmse']:.4f}",
-        )
-
-        print("================================")
 
     ingestion_result = ingestion()
 
@@ -169,8 +207,14 @@ def traffic_training_pipeline():
         features_path
     )
 
+    promotion_result = quality_gate(
+        features_path,
+        training_result,
+    )
+
     notify(
-        training_result
+        training_result,
+        promotion_result,
     )
 
 
