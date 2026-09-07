@@ -17,6 +17,7 @@ from traffic_prediction.storage.repositories import (
     insert_predictions,
 )
 from traffic_prediction.processing.cleaning import clean_traffic_data
+from traffic_prediction.features.schema import FEATURE_COLUMNS
 
 settings = get_settings()
 
@@ -24,23 +25,6 @@ settings = get_settings()
 ROAD_REFERENCE_PATH = Path(
     "data/raw/reference/road_reference.parquet"
 )
-
-FEATURE_COLUMNS = [
-    "q",
-    "k",
-    "hour",
-    "day_of_week",
-    "is_weekend",
-    "q_lag_1h",
-    "k_lag_1h",
-    "q_lag_2h",
-    "k_lag_2h",
-    "q_lag_24h",
-    "k_lag_24h",
-    "latitude",
-    "longitude",
-    "road_length_m",
-]
 
 
 def load_champion_model() -> tuple[object, str]:

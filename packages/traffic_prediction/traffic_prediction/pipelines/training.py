@@ -12,32 +12,16 @@ from shared.config import get_settings
 from traffic_prediction.models.baseline import temporal_train_test_split
 from traffic_prediction.models.evaluate import evaluate_regression
 from traffic_prediction.models.lightgbm import train_lightgbm
-
+from traffic_prediction.features.schema import (
+    FEATURE_COLUMNS,
+    TARGET_COLUMN,
+)
 
 DATASET_PATH = Path(
     "data/processed/training_features.parquet"
 )
 
 EXPERIMENT_NAME = "traffic-prediction-v3"
-
-TARGET_COLUMN = "target_k_1h"
-
-FEATURE_COLUMNS = [
-    "q",
-    "k",
-    "hour",
-    "day_of_week",
-    "is_weekend",
-    "q_lag_1h",
-    "k_lag_1h",
-    "q_lag_2h",
-    "k_lag_2h",
-    "q_lag_24h",
-    "k_lag_24h",
-    "latitude",
-    "longitude",
-    "road_length_m",
-]
 
 
 def _load_dataset(
