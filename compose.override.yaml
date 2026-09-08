@@ -26,3 +26,18 @@ services:
             # Development source code
             - ./packages/shared/shared:/home/airflow/.local/lib/python3.12/site-packages/shared
             - ./packages/traffic_prediction/traffic_prediction:/home/airflow/.local/lib/python3.12/site-packages/traffic_prediction
+    
+    api:
+        command:
+            - uvicorn
+            - api_service.main:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8000"
+            - --reload
+        
+        volumes:
+            - ./services/api/src/api_service:/usr/local/lib/python3.12/site-packages/api_service
+            - ./packages/shared/shared:/usr/local/lib/python3.12/site-packages/shared
+            - ./packages/traffic_prediction/traffic_prediction:/usr/local/lib/python3.12/site-packages/traffic_prediction

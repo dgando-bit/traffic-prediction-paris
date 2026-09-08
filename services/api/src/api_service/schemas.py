@@ -13,3 +13,7 @@ class PredictionResponse(BaseModel):
     target_timestamp_utc: datetime
     predicted_k: float
     model_version: str
+
+
+class RoadResponse(BaseModel):
+    iu_ac: str

@@ -5,6 +5,7 @@ from sqlalchemy import text
 from api_service.schemas import (
     HealthResponse,
     PredictionResponse,
+    RoadResponse,
 )
 from traffic_prediction.storage.database import (
     get_db_session,
@@ -17,7 +18,7 @@ from traffic_prediction.storage.repositories import (
 
 app = FastAPI(
     title="Paris Traffic Prediction API",
-    version="0.1.0",
+    version="0.2.0",
     description=(
         "API exposing one-hour-ahead traffic "
         "predictions for Paris road segments."
@@ -28,6 +29,7 @@ app = FastAPI(
 @app.get(
     "/health",
     response_model=HealthResponse,
+    tags=["system"],
 )
 def health() -> HealthResponse:
     try:
@@ -48,10 +50,42 @@ def health() -> HealthResponse:
 
 
 @app.get(
+    "/roads",
+    response_model=list[RoadResponse],
+    tags=["roads"],
+)
+def roads() -> list[RoadResponse]:
+    """
+    Return road segments for which predictions
+    are currently available.
+    """
+    with get_db_session() as session:
+        predictions = get_latest_predictions(
+            session
+        )
+
+        road_ids = sorted(
+            {
+                prediction.iu_ac
+                for prediction in predictions
+            }
+        )
+
+        return [
+            RoadResponse(iu_ac=iu_ac)
+            for iu_ac in road_ids
+        ]
+
+@app.get(
     "/predictions/latest",
     response_model=list[PredictionResponse],
+    tags=["predictions"],
 )
 def latest_predictions() -> list[PredictionResponse]:
+    """
+    Return the most recent prediction available
+    for every road segment.
+    """
     with get_db_session() as session:
         predictions = get_latest_predictions(
             session
@@ -76,10 +110,14 @@ def latest_predictions() -> list[PredictionResponse]:
 @app.get(
     "/predictions/{iu_ac}",
     response_model=PredictionResponse,
+    tags=["predictions"],
 )
 def latest_prediction(
     iu_ac: str,
 ) -> PredictionResponse:
+    """
+    Return the latest prediction for one road.
+    """
     with get_db_session() as session:
         prediction = (
             get_latest_prediction_for_road(
@@ -115,7 +153,6 @@ def run() -> None:
         "api_service.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,
     )
 
 
