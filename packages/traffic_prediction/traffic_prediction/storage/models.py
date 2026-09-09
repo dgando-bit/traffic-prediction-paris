@@ -7,6 +7,7 @@ from sqlalchemy import (
     Float,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import (
@@ -59,6 +60,46 @@ class TrafficObservation(Base):
         ),
     )
 
+class RoadSegment(Base):
+    __tablename__ = "road_segments"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    iu_ac: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    libelle: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+
+    latitude: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    longitude: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    road_length_m: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    geo_shape: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
 
 class Prediction(Base):
     __tablename__ = "predictions"

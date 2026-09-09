@@ -17,3 +17,8 @@ class PredictionResponse(BaseModel):
 
 class RoadResponse(BaseModel):
     iu_ac: str
+    libelle: str | None
+    latitude: float
+    longitude: float
+    road_length_m: float | None
+    geo_shape: str | None

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from traffic_prediction.storage.models import (
     Prediction,
+    RoadSegment,
     TrafficObservation,
 )
 import pandas as pd
@@ -251,3 +252,40 @@ def get_latest_prediction_for_road(
     )
 
     return session.scalar(statement)
+
+def upsert_road_segments(
+    session: Session,
+    rows: Iterable[dict],
+) -> None:
+    rows = list(rows)
+
+    if not rows:
+        return
+
+    statement = insert(RoadSegment).values(rows)
+
+    statement = statement.on_conflict_do_update(
+        index_elements=["iu_ac"],
+        set_={
+            "libelle": statement.excluded.libelle,
+            "latitude": statement.excluded.latitude,
+            "longitude": statement.excluded.longitude,
+            "road_length_m": statement.excluded.road_length_m,
+            "geo_shape": statement.excluded.geo_shape,
+        },
+    )
+
+    session.execute(statement)
+
+
+def get_road_segments(
+    session: Session,
+) -> list[RoadSegment]:
+    statement = (
+        select(RoadSegment)
+        .order_by(RoadSegment.iu_ac)
+    )
+
+    return list(
+        session.scalars(statement)
+    )

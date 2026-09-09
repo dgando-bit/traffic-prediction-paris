@@ -13,6 +13,7 @@ from traffic_prediction.storage.database import (
 from traffic_prediction.storage.repositories import (
     get_latest_prediction_for_road,
     get_latest_predictions,
+    get_road_segments,
 )
 
 
@@ -56,24 +57,24 @@ def health() -> HealthResponse:
 )
 def roads() -> list[RoadResponse]:
     """
-    Return road segments for which predictions
-    are currently available.
+    Return monitored road segments and
+    their geographic metadata.
     """
     with get_db_session() as session:
-        predictions = get_latest_predictions(
+        road_segments = get_road_segments(
             session
         )
 
-        road_ids = sorted(
-            {
-                prediction.iu_ac
-                for prediction in predictions
-            }
-        )
-
         return [
-            RoadResponse(iu_ac=iu_ac)
-            for iu_ac in road_ids
+            RoadResponse(
+                iu_ac=road.iu_ac,
+                libelle=road.libelle,
+                latitude=road.latitude,
+                longitude=road.longitude,
+                road_length_m=road.road_length_m,
+                geo_shape=road.geo_shape,
+            )
+            for road in road_segments
         ]
 
 @app.get(
