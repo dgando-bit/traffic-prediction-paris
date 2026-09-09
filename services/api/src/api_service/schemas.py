@@ -22,3 +22,16 @@ class RoadResponse(BaseModel):
     longitude: float
     road_length_m: float | None
     geo_shape: str | None
+
+class TrafficObservationResponse(BaseModel):
+    timestamp_utc: datetime
+    q: float | None
+    k: float | None
+
+
+class RoadHistoryResponse(BaseModel):
+    iu_ac: str
+    observations: list[
+        TrafficObservationResponse
+    ]
+    prediction: PredictionResponse | None

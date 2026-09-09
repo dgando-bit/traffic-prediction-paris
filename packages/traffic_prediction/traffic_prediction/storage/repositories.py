@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -284,6 +284,45 @@ def get_road_segments(
     statement = (
         select(RoadSegment)
         .order_by(RoadSegment.iu_ac)
+    )
+
+    return list(
+        session.scalars(statement)
+    )
+
+def get_traffic_history_for_road(
+    session: Session,
+    iu_ac: str,
+    hours: int = 24,
+) -> list[TrafficObservation]:
+    latest_timestamp = session.scalar(
+        select(
+            func.max(
+                TrafficObservation.timestamp_utc
+            )
+        ).where(
+            TrafficObservation.iu_ac == iu_ac
+        )
+    )
+
+    if latest_timestamp is None:
+        return []
+
+    start_timestamp = (
+        latest_timestamp
+        - timedelta(hours=hours)
+    )
+
+    statement = (
+        select(TrafficObservation)
+        .where(
+            TrafficObservation.iu_ac == iu_ac,
+            TrafficObservation.timestamp_utc
+            >= start_timestamp,
+        )
+        .order_by(
+            TrafficObservation.timestamp_utc
+        )
     )
 
     return list(

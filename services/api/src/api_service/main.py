@@ -1,11 +1,17 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Query,
+)
 from sqlalchemy import text
 
 from api_service.schemas import (
     HealthResponse,
     PredictionResponse,
+    RoadHistoryResponse,
     RoadResponse,
+    TrafficObservationResponse,
 )
 from traffic_prediction.storage.database import (
     get_db_session,
@@ -14,6 +20,7 @@ from traffic_prediction.storage.repositories import (
     get_latest_prediction_for_road,
     get_latest_predictions,
     get_road_segments,
+    get_traffic_history_for_road,
 )
 
 
@@ -107,6 +114,84 @@ def latest_predictions() -> list[PredictionResponse]:
             for row in predictions
         ]
 
+@app.get(
+    "/roads/{iu_ac}/history",
+    response_model=RoadHistoryResponse,
+    tags=["roads"],
+)
+def road_history(
+    iu_ac: str,
+    hours: int = Query(
+        default=24,
+        ge=1,
+        le=168,
+    ),
+) -> RoadHistoryResponse:
+    """
+    Return recent traffic observations for one
+    road and its latest one-hour-ahead prediction.
+    """
+    with get_db_session() as session:
+        observations = (
+            get_traffic_history_for_road(
+                session,
+                iu_ac=iu_ac,
+                hours=hours,
+            )
+        )
+
+        if not observations:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"No traffic history found "
+                    f"for road {iu_ac}"
+                ),
+            )
+
+        prediction = (
+            get_latest_prediction_for_road(
+                session,
+                iu_ac,
+            )
+        )
+
+        prediction_response = (
+            PredictionResponse(
+                iu_ac=prediction.iu_ac,
+                prediction_timestamp_utc=(
+                    prediction
+                    .prediction_timestamp_utc
+                ),
+                target_timestamp_utc=(
+                    prediction
+                    .target_timestamp_utc
+                ),
+                predicted_k=(
+                    prediction.predicted_k
+                ),
+                model_version=(
+                    prediction.model_version
+                ),
+            )
+            if prediction is not None
+            else None
+        )
+
+        return RoadHistoryResponse(
+            iu_ac=iu_ac,
+            observations=[
+                TrafficObservationResponse(
+                    timestamp_utc=(
+                        observation.timestamp_utc
+                    ),
+                    q=observation.q,
+                    k=observation.k,
+                )
+                for observation in observations
+            ],
+            prediction=prediction_response,
+        )
 
 @app.get(
     "/predictions/{iu_ac}",
