@@ -5,65 +5,177 @@ from traffic_prediction.ingestion.road_reference import (
     normalize_road_reference,
     save_road_reference,
 )
+from traffic_prediction.selection.roads import (
+    fetch_road_statistics,
+    select_eligible_roads,
+)
 
-
-ROAD_IDS = [
-    "4632", "4634", "1029", "1030", "1031",
-    "1032", "1067", "1072", "4630", "4633",
-    "4637", "985", "1033", "1034", "1111",
-    "1112", "1222", "1043", "1044", "1038",
-]
 
 OUTPUT_PATH = Path(
     "data/raw/reference/road_reference.parquet"
 )
 
+MIN_OBSERVATIONS = 24 * 90
+MIN_VALID_RATIO = 0.95
+
 
 def main() -> None:
-    raw_df = fetch_road_reference(ROAD_IDS)
+    print(
+        "=== Fetching traffic statistics ==="
+    )
 
-    df = normalize_road_reference(raw_df)
-
-    print("=== Road reference ===")
-    print(f"Rows         : {len(df)}")
-    print(f"Unique roads : {df['iu_ac'].nunique()}")
+    road_stats = fetch_road_statistics()
 
     print(
-        df[
-            [
-                "iu_ac",
-                "libelle",
-                "latitude",
-                "longitude",
-                "road_length_m",
-                "iu_nd_amont",
-                "iu_nd_aval",
-            ]
+        f"Traffic roads found: "
+        f"{road_stats['iu_ac'].nunique()}"
+    )
+
+    # ---------------------------------------------------------
+    # Pre-select traffic candidates
+    # ---------------------------------------------------------
+
+    stats = road_stats.copy()
+
+    stats["valid_q_ratio"] = (
+        stats["n_valid_q"]
+        / stats["n_observations"]
+    )
+
+    stats["valid_k_ratio"] = (
+        stats["n_valid_k"]
+        / stats["n_observations"]
+    )
+
+    candidate_mask = (
+        (
+            stats["n_observations"]
+            >= MIN_OBSERVATIONS
+        )
+        & (
+            stats["valid_q_ratio"]
+            >= MIN_VALID_RATIO
+        )
+        & (
+            stats["valid_k_ratio"]
+            >= MIN_VALID_RATIO
+        )
+    )
+
+    candidate_ids = (
+        stats.loc[
+            candidate_mask,
+            "iu_ac",
         ]
-        .sort_values("iu_ac")
-        .to_string(index=False)
+        .astype(str)
+        .tolist()
     )
 
-    print("\n=== Missing values ===")
     print(
-        df[
-            [
-                "latitude",
-                "longitude",
-                "road_length_m",
-            ]
-        ].isna().sum()
+        f"Traffic candidates: "
+        f"{len(candidate_ids)}"
     )
 
-    print("\n=== Road length statistics ===")
-    print(df["road_length_m"].describe())
+    # ---------------------------------------------------------
+    # Download road reference only for candidates
+    # ---------------------------------------------------------
+
+    print(
+        "\n=== Fetching road reference ==="
+    )
+
+    raw_reference = fetch_road_reference(
+        candidate_ids,
+    )
+
+    reference = normalize_road_reference(
+        raw_reference
+    )
+
+    print(
+        f"Normalized reference roads: "
+        f"{reference['iu_ac'].nunique()}"
+    )
+
+    # ---------------------------------------------------------
+    # Final eligibility
+    # ---------------------------------------------------------
+
+    eligible = select_eligible_roads(
+        road_stats,
+        reference,
+        min_observations=MIN_OBSERVATIONS,
+        min_valid_ratio=MIN_VALID_RATIO,
+    )
+
+    eligible_ids = set(
+        eligible["iu_ac"]
+        .astype(str)
+        .tolist()
+    )
+
+    # Keep complete road-reference columns.
+    final_reference = (
+        reference[
+            reference["iu_ac"]
+            .astype(str)
+            .isin(eligible_ids)
+        ]
+        .copy()
+        .sort_values("iu_ac")
+        .reset_index(drop=True)
+    )
+
+    print(
+        f"Final eligible roads: "
+        f"{len(final_reference)}"
+    )
+
+    # ---------------------------------------------------------
+    # Validation
+    # ---------------------------------------------------------
+
+    required_columns = [
+        "latitude",
+        "longitude",
+        "road_length_m",
+        "geo_shape",
+    ]
+
+    missing = (
+        final_reference[
+            required_columns
+        ]
+        .isna()
+        .sum()
+    )
+
+    print(
+        "\n=== Missing values ==="
+    )
+    print(missing)
+
+    print(
+        "\n=== Road length statistics ==="
+    )
+    print(
+        final_reference[
+            "road_length_m"
+        ].describe()
+    )
+
+    # ---------------------------------------------------------
+    # Save
+    # ---------------------------------------------------------
 
     save_road_reference(
-        df,
+        final_reference,
         OUTPUT_PATH,
     )
 
-    print(f"\nSaved: {OUTPUT_PATH}")
+    print(
+        f"\nSaved: {OUTPUT_PATH}"
+    )
 
 
 if __name__ == "__main__":

@@ -328,3 +328,35 @@ def get_traffic_history_for_road(
     return list(
         session.scalars(statement)
     )
+
+def get_latest_traffic_timestamps_by_road(
+    session: Session,
+    road_ids: Iterable[str] | None = None,
+) -> dict[str, datetime]:
+    statement = (
+        select(
+            TrafficObservation.iu_ac,
+            func.max(
+                TrafficObservation.timestamp_utc
+            ).label("latest_timestamp"),
+        )
+        .group_by(TrafficObservation.iu_ac)
+    )
+
+    if road_ids is not None:
+        road_ids = list(road_ids)
+
+        if not road_ids:
+            return {}
+
+        statement = statement.where(
+            TrafficObservation.iu_ac.in_(road_ids)
+        )
+
+    rows = session.execute(statement).all()
+
+    return {
+        iu_ac: latest_timestamp
+        for iu_ac, latest_timestamp in rows
+        if latest_timestamp is not None
+    }

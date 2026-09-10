@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
+from collections.abc import Sequence
 
 import httpx
 import pandas as pd
@@ -119,39 +120,104 @@ def _compute_linestring_length_m(
 
 
 def fetch_road_reference(
-    road_ids: list[str],
+    road_ids: Sequence[str],
+    *,
+    batch_size: int = 50,
+    page_size: int = 100,
 ) -> pd.DataFrame:
     """
     Fetch road reference information from Paris Open Data.
 
+    Road identifiers are fetched in batches to avoid making one
+    HTTP request per road.
+
     Parameters
     ----------
     road_ids:
-        List of road segment identifiers (iu_ac).
+        Road segment identifiers (iu_ac).
+
+    batch_size:
+        Number of road IDs included in one API filter.
+
+    page_size:
+        Number of records requested per API page.
 
     Returns
     -------
     pd.DataFrame
         Raw road reference records.
     """
-    rows = []
+    road_ids = list(
+        dict.fromkeys(
+            str(road_id)
+            for road_id in road_ids
+        )
+    )
 
-    for road_id in road_ids:
-        response = httpx.get(
-            ROAD_REFERENCE_URL,
-            params={
-                "where": f'iu_ac="{road_id}"',
-                "limit": 100,
-            },
-            timeout=30,
+    if not road_ids:
+        return pd.DataFrame()
+
+    rows: list[dict] = []
+
+    batches = [
+        road_ids[index:index + batch_size]
+        for index in range(
+            0,
+            len(road_ids),
+            batch_size,
+        )
+    ]
+
+    for batch_index, batch in enumerate(
+        batches,
+        start=1,
+    ):
+        road_filter = " OR ".join(
+            f'iu_ac="{road_id}"'
+            for road_id in batch
         )
 
-        response.raise_for_status()
+        where_clause = f"({road_filter})"
 
-        payload = response.json()
+        offset = 0
 
-        rows.extend(
-            payload.get("results", [])
+        while True:
+            response = httpx.get(
+                ROAD_REFERENCE_URL,
+                params={
+                    "where": where_clause,
+                    "limit": page_size,
+                    "offset": offset,
+                },
+                timeout=30,
+            )
+
+            response.raise_for_status()
+
+            payload = response.json()
+
+            page = payload.get(
+                "results",
+                [],
+            )
+
+            if not page:
+                break
+
+            rows.extend(page)
+
+            if len(page) < page_size:
+                break
+
+            offset += len(page)
+
+        logger.info(
+            "Road reference batch %s/%s fetched "
+            "(%s roads, %s total records)",
+            batch_index,
+            len(batches),
+            len(batch),
+            len(rows),
         )
 
     logger.info(

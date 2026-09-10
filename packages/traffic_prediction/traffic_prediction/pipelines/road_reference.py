@@ -1,12 +1,13 @@
 from __future__ import annotations
+import pandas as pd
 
 from pathlib import Path
 
-import pandas as pd
 
 from traffic_prediction.storage.database import get_db_session
 from traffic_prediction.storage.repositories import upsert_road_segments
-
+from traffic_prediction.storage.models import RoadSegment
+from sqlalchemy import delete
 
 DEFAULT_REFERENCE_PATH = Path(
     "data/raw/reference/road_reference.parquet"
@@ -50,10 +51,23 @@ def sync_road_reference(
 
     rows = roads.to_dict(orient="records")
 
+    eligible_ids = set(
+        roads["iu_ac"].astype(str)
+    )
+
     with get_db_session() as session:
         upsert_road_segments(
             session,
             rows,
         )
+
+        if eligible_ids:
+            session.execute(
+                delete(RoadSegment).where(
+                    RoadSegment.iu_ac.not_in(
+                        eligible_ids
+                    )
+                )
+            )
 
     return len(rows)
