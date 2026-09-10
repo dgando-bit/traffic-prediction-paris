@@ -360,3 +360,15 @@ def get_latest_traffic_timestamps_by_road(
         for iu_ac, latest_timestamp in rows
         if latest_timestamp is not None
     }
+
+def get_all_road_ids(
+    session: Session,
+) -> list[str]:
+    statement = (
+        select(RoadSegment.iu_ac)
+        .order_by(RoadSegment.iu_ac)
+    )
+
+    return list(
+        session.scalars(statement).all()
+    )
