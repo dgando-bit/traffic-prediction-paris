@@ -123,6 +123,22 @@ def build_prediction_features(
         road_reference_df,
     )
 
+    eligible_road_ids = set(
+        road_reference_df["iu_ac"]
+        .astype(str)
+    )
+
+    features_df = features_df[
+        features_df["iu_ac"]
+        .astype(str)
+        .isin(eligible_road_ids)
+    ].copy()
+
+    print(
+        f"Kept {features_df['iu_ac'].nunique()} "
+        "eligible roads after road-reference filtering"
+    )
+
     features_df = add_traffic_lag_features(
         features_df,
         lags=(1, 2, 24),
