@@ -1,32 +1,31 @@
 services:
-    
     airflow-apiserver:
         volumes:
             - ./services/airflow/dags:/opt/airflow/dags
             - ./data:/opt/airflow/data
-            
+
             # Development source code
             - ./packages/shared/shared:/home/airflow/.local/lib/python3.12/site-packages/shared
             - ./packages/traffic_prediction/traffic_prediction:/home/airflow/.local/lib/python3.12/site-packages/traffic_prediction
-    
+
     airflow-scheduler:
         volumes:
             - ./services/airflow/dags:/opt/airflow/dags
             - ./data:/opt/airflow/data
-            
+
             # Development source code
             - ./packages/shared/shared:/home/airflow/.local/lib/python3.12/site-packages/shared
             - ./packages/traffic_prediction/traffic_prediction:/home/airflow/.local/lib/python3.12/site-packages/traffic_prediction
-    
+
     airflow-dag-processor:
         volumes:
             - ./services/airflow/dags:/opt/airflow/dags
             - ./data:/opt/airflow/data
-            
+
             # Development source code
             - ./packages/shared/shared:/home/airflow/.local/lib/python3.12/site-packages/shared
             - ./packages/traffic_prediction/traffic_prediction:/home/airflow/.local/lib/python3.12/site-packages/traffic_prediction
-    
+
     api:
         command:
             - uvicorn
@@ -36,8 +35,18 @@ services:
             - --port
             - "8000"
             - --reload
-        
+
         volumes:
             - ./services/api/src/api_service:/usr/local/lib/python3.12/site-packages/api_service
             - ./packages/shared/shared:/usr/local/lib/python3.12/site-packages/shared
             - ./packages/traffic_prediction/traffic_prediction:/usr/local/lib/python3.12/site-packages/traffic_prediction
+
+    prometheus:
+        volumes:
+            - ./deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+            - ./deployments/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+
+    grafana:
+        volumes:
+            - ./deployments/grafana/provisioning:/etc/grafana/provisioning:ro
+            - ./deployments/grafana/dashboards:/var/lib/grafana/dashboards:ro

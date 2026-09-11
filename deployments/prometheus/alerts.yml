@@ -1,0 +1,23 @@
+groups:
+  - name: traffic_prediction_alerts
+    rules:
+      - alert: TrafficDataStale
+        expr: traffic_observation_age_seconds > 21600
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Traffic data is stale"
+          description: >
+            The latest traffic observation is more than 6 hours old.
+
+      - alert: PredictionCoverageLow
+        expr: traffic_prediction_coverage_ratio < 0.95
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prediction coverage is too low"
+          description: >
+            Prediction coverage for horizon +{{ $labels.horizon_hours }}h
+            is below 95%.

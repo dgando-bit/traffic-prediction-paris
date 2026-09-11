@@ -1,0 +1,459 @@
+{
+	"annotations": {
+		"list": []
+	},
+	"editable": true,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 0,
+	"id": null,
+	"links": [],
+	"panels": [
+		{
+			"type": "stat",
+			"title": "Axes surveillés",
+			"id": 1,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "traffic_total_roads",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "fixed",
+						"fixedColor": "text"
+					},
+					"decimals": 0
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 5,
+				"w": 4,
+				"x": 0,
+				"y": 0
+			},
+			"options": {
+				"reduceOptions": {
+					"calcs": [
+						"lastNotNull"
+					]
+				},
+				"orientation": "auto",
+				"textMode": "auto"
+			}
+		},
+		{
+			"type": "stat",
+			"title": "Couverture +1h",
+			"id": 2,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "traffic_prediction_coverage_ratio{horizon_hours=\"1\"} * 100",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "percent",
+					"decimals": 2,
+					"min": 0,
+					"max": 100,
+					"color": {
+						"mode": "thresholds"
+					},
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "red",
+								"value": null
+							},
+							{
+								"color": "orange",
+								"value": 95
+							},
+							{
+								"color": "green",
+								"value": 99
+							}
+						]
+					}
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 5,
+				"w": 4,
+				"x": 4,
+				"y": 0
+			}
+		},
+		{
+			"type": "stat",
+			"title": "Couverture +2h",
+			"id": 3,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "traffic_prediction_coverage_ratio{horizon_hours=\"2\"} * 100",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "percent",
+					"decimals": 2,
+					"min": 0,
+					"max": 100,
+					"color": {
+						"mode": "thresholds"
+					},
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "red",
+								"value": null
+							},
+							{
+								"color": "orange",
+								"value": 95
+							},
+							{
+								"color": "green",
+								"value": 99
+							}
+						]
+					}
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 5,
+				"w": 4,
+				"x": 8,
+				"y": 0
+			}
+		},
+		{
+			"type": "stat",
+			"title": "Couverture +3h",
+			"id": 4,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "traffic_prediction_coverage_ratio{horizon_hours=\"3\"} * 100",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "percent",
+					"decimals": 2,
+					"min": 0,
+					"max": 100,
+					"color": {
+						"mode": "thresholds"
+					},
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "red",
+								"value": null
+							},
+							{
+								"color": "orange",
+								"value": 95
+							},
+							{
+								"color": "green",
+								"value": 99
+							}
+						]
+					}
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 5,
+				"w": 4,
+				"x": 12,
+				"y": 0
+			}
+		},
+		{
+			"type": "stat",
+			"title": "Âge dernière observation",
+			"id": 5,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "traffic_observation_age_seconds",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "s",
+					"decimals": 0,
+					"color": {
+						"mode": "thresholds"
+					},
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "green",
+								"value": null
+							},
+							{
+								"color": "orange",
+								"value": 7200
+							},
+							{
+								"color": "red",
+								"value": 21600
+							}
+						]
+					}
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 5,
+				"w": 4,
+				"x": 16,
+				"y": 0
+			}
+		},
+		{
+			"type": "stat",
+			"title": "Version modèle +1h",
+			"id": 6,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "traffic_champion_model_version{horizon_hours=\"1\"}",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"decimals": 0,
+					"unit": "string",
+					"prefix": "v"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 5,
+				"w": 4,
+				"x": 20,
+				"y": 0
+			}
+		},
+		{
+			"type": "timeseries",
+			"title": "Requêtes API / seconde",
+			"id": 7,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "sum(rate(traffic_api_http_requests_total[5m]))",
+					"legendFormat": "API",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "reqps"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 0,
+				"y": 5
+			}
+		},
+		{
+			"type": "timeseries",
+			"title": "Latence API p95",
+			"id": 8,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "histogram_quantile(0.95, sum by (le) (rate(traffic_api_http_request_duration_seconds_bucket[5m])))",
+					"legendFormat": "p95",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "s"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 8,
+				"y": 5
+			}
+		},
+		{
+			"type": "stat",
+			"title": "Erreurs 5xx (5 min)",
+			"id": 9,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "sum(increase(traffic_api_http_requests_total{status_code=~\"5..\"}[5m])) or vector(0)",
+					"legendFormat": "Erreurs 5xx",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "reqps"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 16,
+				"y": 5
+			}
+		},
+		{
+			"type": "timeseries",
+			"title": "Couverture des prédictions",
+			"id": 10,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "traffic_prediction_coverage_ratio * 100",
+					"legendFormat": "+{{horizon_hours}}h",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "percent",
+					"min": 0,
+					"max": 100
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 0,
+				"y": 13
+			}
+		},
+		{
+			"type": "timeseries",
+			"title": "Âge des prédictions",
+			"id": 11,
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"targets": [
+				{
+					"expr": "traffic_prediction_age_seconds",
+					"legendFormat": "+{{horizon_hours}}h",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "s",
+					"color": {
+						"mode": "palette-classic"
+					},
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "green",
+								"value": null
+							},
+							{
+								"color": "orange",
+								"value": 7200
+							},
+							{
+								"color": "red",
+								"value": 21600
+							}
+						]
+					}
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 12,
+				"y": 13
+			}
+		}
+	],
+	"refresh": "15s",
+	"schemaVersion": 41,
+	"tags": [
+		"traffic",
+		"machine-learning",
+		"monitoring"
+	],
+	"templating": {
+		"list": []
+	},
+	"time": {
+		"from": "now-1h",
+		"to": "now"
+	},
+	"timezone": "browser",
+	"title": "Traffic Prediction Paris",
+	"uid": "traffic-prediction-paris",
+	"version": 1
+}

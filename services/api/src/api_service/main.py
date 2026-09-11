@@ -34,6 +34,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from traffic_prediction.monitoring.metrics import (
     HTTP_REQUEST_DURATION_SECONDS,
     HTTP_REQUESTS_TOTAL,
+    refresh_business_metrics,
 )
 
 app = FastAPI(
@@ -123,6 +124,9 @@ def prediction_to_response(
     include_in_schema=False,
 )
 def metrics() -> Response:
+    with get_db_session() as session:
+        refresh_business_metrics(session)
+
     return Response(
         content=generate_latest(),
         media_type=CONTENT_TYPE_LATEST,
