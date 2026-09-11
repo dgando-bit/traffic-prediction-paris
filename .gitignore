@@ -45,7 +45,7 @@ artifacts/
 .coverage
 htmlcov/
 
-docs/
+doc_local/
 
 services/airflow/logs
 services/airflow/config/simple_auth_manager_passwords.json
