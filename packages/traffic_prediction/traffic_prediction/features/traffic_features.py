@@ -39,6 +39,11 @@ def add_traffic_lag_features(
     ).reset_index(drop=True)
 
     for lag in lags:
+        if lag <= 0:
+            raise ValueError(
+                "All lags must be greater than 0."
+            )
+
         lookup = df[
             [
                 "iu_ac",
@@ -86,12 +91,37 @@ def add_traffic_target(
     horizon_hours: int = 1,
 ) -> pd.DataFrame:
     """
-    Create the future occupancy target.
+    Create one future occupancy target.
 
-    For horizon_hours=1:
-        target_k_1h = occupancy exactly one hour in the future.
+    Example:
+        horizon_hours=1
+        -> target_k_1h
 
-    The target is matched using timestamps rather than row position.
+    The target is matched using exact timestamps rather than
+    row position.
+    """
+    return add_traffic_targets(
+        df,
+        horizons=(horizon_hours,),
+    )
+
+
+def add_traffic_targets(
+    df: pd.DataFrame,
+    horizons: tuple[int, ...] = (1, 2, 3),
+) -> pd.DataFrame:
+    """
+    Create future occupancy targets for multiple horizons.
+
+    Examples:
+        target_k_1h = occupancy exactly 1 hour in the future
+        target_k_2h = occupancy exactly 2 hours in the future
+        target_k_3h = occupancy exactly 3 hours in the future
+
+    Targets are matched using exact timestamps rather than
+    row position.
+
+    This avoids incorrect targets when observations are missing.
     """
     required_columns = {
         "iu_ac",
@@ -106,52 +136,79 @@ def add_traffic_target(
             f"Missing required columns: {sorted(missing_columns)}"
         )
 
-    if horizon_hours <= 0:
+    if not horizons:
         raise ValueError(
-            "horizon_hours must be greater than 0."
+            "At least one prediction horizon is required."
+        )
+
+    if any(horizon <= 0 for horizon in horizons):
+        raise ValueError(
+            "All horizons must be greater than 0."
+        )
+
+    if len(set(horizons)) != len(horizons):
+        raise ValueError(
+            "Prediction horizons must be unique."
         )
 
     df = df.copy()
 
-    target_column = f"target_k_{horizon_hours}h"
+    df = df.sort_values(
+        ["iu_ac", "timestamp_utc"]
+    ).reset_index(drop=True)
 
-    lookup = df[
-        [
-            "iu_ac",
-            "timestamp_utc",
-            "k",
-        ]
-    ].copy()
+    for horizon_hours in horizons:
+        target_column = (
+            f"target_k_{horizon_hours}h"
+        )
 
-    # Example:
-    #
-    # k measured at 18:00 must become the target
-    # of the observation at 17:00.
-    #
-    # Therefore:
-    #
-    # 18:00 -> 17:00 in the lookup table.
-    lookup["timestamp_utc"] = (
-        lookup["timestamp_utc"]
-        - pd.Timedelta(hours=horizon_hours)
-    )
+        lookup = df[
+            [
+                "iu_ac",
+                "timestamp_utc",
+                "k",
+            ]
+        ].copy()
 
-    lookup = lookup.rename(
-        columns={
-            "k": target_column,
-        }
-    )
+        # Example for horizon=2:
+        #
+        # k measured at 19:00 must become the target
+        # of the observation at 17:00.
+        #
+        # Therefore:
+        #
+        # 19:00 -> 17:00 in the lookup table.
+        lookup["timestamp_utc"] = (
+            lookup["timestamp_utc"]
+            - pd.Timedelta(
+                hours=horizon_hours
+            )
+        )
 
-    df = df.merge(
-        lookup,
-        on=["iu_ac", "timestamp_utc"],
-        how="left",
-        validate="one_to_one",
-    )
+        lookup = lookup.rename(
+            columns={
+                "k": target_column,
+            }
+        )
+
+        df = df.merge(
+            lookup,
+            on=[
+                "iu_ac",
+                "timestamp_utc",
+            ],
+            how="left",
+            validate="one_to_one",
+        )
+
+        logger.info(
+            "Traffic target created: %s",
+            target_column,
+        )
 
     logger.info(
-        "Traffic target created: %s",
-        target_column,
+        "Traffic targets created for horizons: %s",
+        horizons,
     )
 
     return df
