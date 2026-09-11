@@ -97,8 +97,8 @@ def insert_predictions(
         set_={
             "predicted_k":
                 statement.excluded.predicted_k,
-            "prediction_timestamp_utc":
-                statement.excluded.prediction_timestamp_utc,
+            "target_timestamp_utc":
+                statement.excluded.target_timestamp_utc,
         },
     )
 
@@ -208,23 +208,32 @@ def get_latest_traffic_timestamp(
 
 def get_latest_predictions(
     session: Session,
+    horizon_hours: int = 1,
 ) -> list[Prediction]:
-    latest_target = session.scalar(
+    latest_prediction_timestamp = session.scalar(
         select(
             func.max(
-                Prediction.target_timestamp_utc
+                Prediction.prediction_timestamp_utc
             )
+        )
+        .where(
+            Prediction.horizon_hours
+            == horizon_hours
         )
     )
 
-    if latest_target is None:
+    if latest_prediction_timestamp is None:
         return []
 
     statement = (
         select(Prediction)
         .where(
-            Prediction.target_timestamp_utc
-            == latest_target
+            Prediction.prediction_timestamp_utc
+            == latest_prediction_timestamp
+        )
+        .where(
+            Prediction.horizon_hours
+            == horizon_hours
         )
         .order_by(
             Prediction.iu_ac
@@ -239,14 +248,19 @@ def get_latest_predictions(
 def get_latest_prediction_for_road(
     session: Session,
     iu_ac: str,
+    horizon_hours: int = 1,
 ) -> Prediction | None:
     statement = (
         select(Prediction)
         .where(
             Prediction.iu_ac == iu_ac
         )
+        .where(
+            Prediction.horizon_hours
+            == horizon_hours
+        )
         .order_by(
-            Prediction.target_timestamp_utc.desc()
+            Prediction.prediction_timestamp_utc.desc()
         )
         .limit(1)
     )

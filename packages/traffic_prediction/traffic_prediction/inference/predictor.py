@@ -8,16 +8,30 @@ import pandas as pd
 from mlflow import MlflowClient
 
 from shared.config import get_settings
-from traffic_prediction.features.road_features import add_road_features
-from traffic_prediction.features.time_features import add_time_features
-from traffic_prediction.features.traffic_features import add_traffic_lag_features
-from traffic_prediction.storage.database import get_db_session
+from traffic_prediction.features.road_features import (
+    add_road_features,
+)
+from traffic_prediction.features.schema import (
+    FEATURE_COLUMNS,
+    PREDICTION_HORIZONS,
+)
+from traffic_prediction.features.time_features import (
+    add_time_features,
+)
+from traffic_prediction.features.traffic_features import (
+    add_traffic_lag_features,
+)
+from traffic_prediction.processing.cleaning import (
+    clean_traffic_data,
+)
+from traffic_prediction.storage.database import (
+    get_db_session,
+)
 from traffic_prediction.storage.repositories import (
     get_recent_traffic_dataframe,
     insert_predictions,
 )
-from traffic_prediction.processing.cleaning import clean_traffic_data
-from traffic_prediction.features.schema import FEATURE_COLUMNS
+
 
 settings = get_settings()
 
@@ -27,9 +41,29 @@ ROAD_REFERENCE_PATH = Path(
 )
 
 
-def load_champion_model() -> tuple[object, str]:
+def get_registered_model_name(
+    horizon_hours: int,
+) -> str:
     """
-    Load the production model from the MLflow Model Registry.
+    Return the MLflow registered-model name for
+    a prediction horizon.
+    """
+    if horizon_hours <= 0:
+        raise ValueError(
+            "horizon_hours must be greater than 0."
+        )
+
+    return (
+        f"{settings.registered_model_name}"
+        f"-{horizon_hours}h"
+    )
+
+
+def load_champion_model(
+    horizon_hours: int,
+) -> tuple[object, str]:
+    """
+    Load the champion model for one prediction horizon.
 
     Returns
     -------
@@ -42,22 +76,28 @@ def load_champion_model() -> tuple[object, str]:
 
     client = MlflowClient()
 
+    registered_model_name = (
+        get_registered_model_name(
+            horizon_hours
+        )
+    )
+
     model_version = (
         client.get_model_version_by_alias(
-            settings.registered_model_name,
+            registered_model_name,
             settings.api_model_alias,
         )
     )
 
     model_uri = (
         f"models:/"
-        f"{settings.registered_model_name}"
+        f"{registered_model_name}"
         f"@{settings.api_model_alias}"
     )
 
     print(
         f"Loading model "
-        f"{settings.registered_model_name}"
+        f"{registered_model_name}"
         f"@{settings.api_model_alias} "
         f"(version {model_version.version})"
     )
@@ -66,16 +106,22 @@ def load_champion_model() -> tuple[object, str]:
         model_uri
     )
 
-    return model, str(model_version.version)
+    return (
+        model,
+        str(model_version.version),
+    )
 
 
 def build_prediction_features(
     *,
     history_hours: int = 48,
-    road_reference_path: str | Path = ROAD_REFERENCE_PATH,
+    road_reference_path: str | Path = (
+        ROAD_REFERENCE_PATH
+    ),
 ) -> pd.DataFrame:
     """
-    Build features used for one-hour-ahead traffic prediction.
+    Build the features shared by all prediction
+    horizons.
     """
     road_reference_path = Path(
         road_reference_path
@@ -135,8 +181,10 @@ def build_prediction_features(
     ].copy()
 
     print(
-        f"Kept {features_df['iu_ac'].nunique()} "
-        "eligible roads after road-reference filtering"
+        f"Kept "
+        f"{features_df['iu_ac'].nunique()} "
+        "eligible roads after "
+        "road-reference filtering"
     )
 
     features_df = add_traffic_lag_features(
@@ -199,19 +247,93 @@ def select_latest_observations(
     return latest_df
 
 
+def build_horizon_predictions(
+    prediction_df: pd.DataFrame,
+    *,
+    horizon_hours: int,
+) -> list[dict]:
+    """
+    Generate prediction records for one horizon.
+    """
+    model, model_version = (
+        load_champion_model(
+            horizon_hours
+        )
+    )
+
+    horizon_df = prediction_df.copy()
+
+    horizon_df["predicted_k"] = (
+        model.predict(
+            horizon_df[
+                FEATURE_COLUMNS
+            ]
+        )
+    )
+
+    horizon_df[
+        "prediction_timestamp_utc"
+    ] = horizon_df[
+        "timestamp_utc"
+    ]
+
+    horizon_df[
+        "target_timestamp_utc"
+    ] = (
+        horizon_df[
+            "timestamp_utc"
+        ]
+        + pd.Timedelta(
+            hours=horizon_hours
+        )
+    )
+
+    horizon_df[
+        "horizon_hours"
+    ] = horizon_hours
+
+    horizon_df[
+        "model_version"
+    ] = model_version
+
+    records = (
+        horizon_df[
+            [
+                "iu_ac",
+                "prediction_timestamp_utc",
+                "target_timestamp_utc",
+                "horizon_hours",
+                "predicted_k",
+                "model_version",
+            ]
+        ]
+        .to_dict(
+            orient="records"
+        )
+    )
+
+    print(
+        f"+{horizon_hours}h: "
+        f"{len(records)} predictions "
+        f"generated using model "
+        f"version {model_version}"
+    )
+
+    return records
+
+
 def run_predictions(
     *,
     history_hours: int = 48,
 ) -> int:
     """
-    Generate one-hour-ahead predictions using
-    the MLflow champion model and store them
-    in PostgreSQL.
+    Generate predictions for every configured
+    horizon and store them in PostgreSQL.
 
     Returns
     -------
     int
-        Number of predictions processed.
+        Total number of predictions processed.
     """
     print(
         "Building prediction features "
@@ -237,59 +359,30 @@ def run_predictions(
         )
         return 0
 
-    model, model_version = (
-        load_champion_model()
-    )
-
     print(
         f"Generating predictions for "
-        f"{len(prediction_df)} roads"
+        f"{len(prediction_df)} roads "
+        f"and horizons "
+        f"{PREDICTION_HORIZONS}"
     )
 
-    prediction_df = prediction_df.copy()
+    records: list[dict] = []
 
-    prediction_df["predicted_k"] = (
-        model.predict(
-            prediction_df[
-                FEATURE_COLUMNS
-            ]
+    for horizon_hours in (
+        PREDICTION_HORIZONS
+    ):
+        horizon_records = (
+            build_horizon_predictions(
+                prediction_df,
+                horizon_hours=(
+                    horizon_hours
+                ),
+            )
         )
-    )
 
-    prediction_df[
-        "prediction_timestamp_utc"
-    ] = prediction_df[
-        "timestamp_utc"
-    ]
-
-    prediction_df[
-        "target_timestamp_utc"
-    ] = (
-        prediction_df[
-            "timestamp_utc"
-        ]
-        + pd.Timedelta(hours=1)
-    )
-
-    prediction_records = (
-        prediction_df[
-            [
-                "iu_ac",
-                "prediction_timestamp_utc",
-                "target_timestamp_utc",
-                "predicted_k",
-            ]
-        ]
-        .copy()
-    )
-
-    prediction_records[
-        "model_version"
-    ] = model_version
-
-    records = prediction_records.to_dict(
-        orient="records"
-    )
+        records.extend(
+            horizon_records
+        )
 
     with get_db_session() as session:
         insert_predictions(
@@ -301,8 +394,9 @@ def run_predictions(
 
     print(
         f"{processed} predictions stored "
-        f"using model version "
-        f"{model_version}"
+        f"across "
+        f"{len(PREDICTION_HORIZONS)} "
+        "horizons"
     )
 
     return processed

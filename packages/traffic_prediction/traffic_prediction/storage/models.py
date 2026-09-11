@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     Float,
     Integer,
@@ -10,6 +11,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -128,6 +130,14 @@ class Prediction(Base):
         index=True,
     )
 
+    horizon_hours: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+        index=True,
+    )
+
     predicted_k: Mapped[float] = mapped_column(
         Float,
         nullable=False,
@@ -139,9 +149,14 @@ class Prediction(Base):
     )
 
     __table_args__ = (
+        CheckConstraint(
+            "horizon_hours > 0",
+            name="ck_prediction_horizon_positive",
+        ),
         UniqueConstraint(
             "iu_ac",
-            "target_timestamp_utc",
+            "prediction_timestamp_utc",
+            "horizon_hours",
             "model_version",
             name="uq_prediction",
         ),
