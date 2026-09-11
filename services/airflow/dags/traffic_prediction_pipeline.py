@@ -12,19 +12,25 @@ from traffic_prediction.pipelines.features import (
     build_training_features,
 )
 from traffic_prediction.pipelines.promotion import (
-    promote_candidate,
+    promote_all_candidates,
 )
 from traffic_prediction.pipelines.traffic_ingestion import (
     run_incremental_ingestion,
 )
 from traffic_prediction.pipelines.training import (
-    train_and_register_model,
+    train_and_register_all_horizons,
 )
+
+
+TRAINING_HISTORY_HOURS = 24 * 90
 
 
 @dag(
     dag_id="traffic_training_pipeline",
-    description="Training pipeline for Paris traffic prediction",
+    description=(
+        "Multi-horizon training pipeline "
+        "for Paris traffic prediction"
+    ),
     schedule=None,
     start_date=datetime(2026, 1, 1),
     catchup=False,
@@ -33,6 +39,7 @@ from traffic_prediction.pipelines.training import (
         "traffic",
         "training",
         "mlflow",
+        "multi-horizon",
         "paris",
     ],
 )
@@ -40,10 +47,12 @@ def traffic_training_pipeline():
 
     @task
     def ingestion() -> int:
-        inserted_rows = run_incremental_ingestion()
+        inserted_rows = (
+            run_incremental_ingestion()
+        )
 
         print(
-            f"Ingestion completed: "
+            "Ingestion completed: "
             f"{inserted_rows} observations processed"
         )
 
@@ -54,11 +63,21 @@ def traffic_training_pipeline():
         ingestion_result: int,
     ) -> str:
         print(
-            f"Ingestion result received: "
+            "Ingestion result received: "
             f"{ingestion_result}"
         )
 
-        path = make_training_dataset()
+        print(
+            "Building training dataset "
+            f"from the last "
+            f"{TRAINING_HISTORY_HOURS // 24} days"
+        )
+
+        path = make_training_dataset(
+            history_hours=(
+                TRAINING_HISTORY_HOURS
+            ),
+        )
 
         print(
             f"Training dataset created: {path}"
@@ -75,122 +94,218 @@ def traffic_training_pipeline():
         )
 
         print(
-            f"Training features created: {path}"
+            "Multi-horizon training "
+            f"features created: {path}"
         )
 
         return str(path)
 
     @task
-    def train_model(
+    def train_models(
         features_path: str,
-    ) -> dict[str, Any]:
-        result = train_and_register_model(
-            dataset_path=features_path,
-        )
-
-        return result
-
-    @task
-    def quality_gate(
-        features_path: str,
-        training_result: dict[str, Any],
-    ) -> dict[str, Any]:
-        print(
-            "Evaluating newly trained candidate..."
-        )
-
-        print(
-            "Candidate version:",
-            training_result["model_version"],
-        )
-
-        result = promote_candidate(
-            dataset_path=features_path,
-            metric="mae",
-            min_improvement_pct=1.0,
-        )
-
-        return result
-
-    @task
-    def notify(
-        training_result: dict[str, Any],
-        promotion_result: dict[str, Any],
-    ) -> None:
+    ) -> dict[int, dict[str, Any]]:
         print()
         print(
             "================================"
         )
         print(
-            " Traffic training completed"
+            " Multi-horizon model training"
+        )
+        print(
+            "================================"
+        )
+
+        results = (
+            train_and_register_all_horizons(
+                dataset_path=features_path,
+            )
+        )
+
+        print()
+        print(
+            f"{len(results)} horizon models "
+            "trained and registered."
+        )
+
+        return results
+
+    @task
+    def quality_gate(
+        features_path: str,
+        training_results: dict[
+            int,
+            dict[str, Any],
+        ],
+    ) -> dict[int, dict[str, Any]]:
+        print()
+        print(
+            "================================"
+        )
+        print(
+            " Multi-horizon quality gate"
         )
         print(
             "================================"
         )
 
         print(
-            "Model:",
-            training_result[
-                "registered_model_name"
-            ],
+            f"Training results received "
+            f"for {len(training_results)} "
+            "horizons."
         )
 
+        results = promote_all_candidates(
+            dataset_path=features_path,
+            metric="mae",
+            min_improvement_pct=1.0,
+            min_baseline_improvement_pct=0.0,
+        )
+
+        return results
+
+    @task
+    def notify(
+        training_results: dict[
+            int,
+            dict[str, Any],
+        ],
+        promotion_results: dict[
+            int,
+            dict[str, Any],
+        ],
+    ) -> None:
+        print()
         print(
-            "Candidate version:",
-            promotion_result[
-                "candidate_version"
-            ],
+            "========================================"
         )
-
         print(
-            "Champion version:",
-            promotion_result[
-                "champion_version"
-            ],
+            " Traffic multi-horizon training completed"
         )
-
         print(
-            "Training MAE:",
-            f"{training_result['mae']:.4f}",
+            "========================================"
         )
 
-        print(
-            "Training RMSE:",
-            f"{training_result['rmse']:.4f}",
-        )
-
-        print(
-            "Quality gate:",
-            (
-                "PROMOTED"
-                if promotion_result["promoted"]
-                else "REJECTED"
-            ),
-        )
-
-        if (
-            promotion_result.get(
-                "improvement_pct"
-            )
-            is not None
+        for raw_horizon, result in sorted(
+            promotion_results.items(),
+            key=lambda item: int(item[0]),
         ):
-            print(
-                "Improvement:",
-                f"{promotion_result['improvement_pct']:+.2f}%",
+            horizon = int(
+                raw_horizon
             )
 
-        print(
-            "Reason:",
-            promotion_result["reason"],
-        )
+            status = (
+                "PROMOTED"
+                if result.get(
+                    "promoted",
+                    False,
+                )
+                else "REJECTED"
+            )
 
-        print(
-            "Run ID:",
-            training_result["run_id"],
-        )
+            candidate_metrics = (
+                result.get(
+                    "candidate_metrics",
+                    {},
+                )
+            )
 
+            mae = candidate_metrics.get(
+                "mae"
+            )
+
+            rmse = candidate_metrics.get(
+                "rmse"
+            )
+
+            candidate_version = (
+                result.get(
+                    "candidate_version"
+                )
+            )
+
+            champion_version = (
+                result.get(
+                    "champion_version"
+                )
+            )
+
+            reason = result.get(
+                "reason"
+            )
+
+            baseline_improvement = (
+                result.get(
+                    "baseline_improvement_pct"
+                )
+            )
+
+            champion_improvement = (
+                result.get(
+                    "champion_improvement_pct"
+                )
+            )
+
+            print()
+            print(
+                f"Horizon: +{horizon}h"
+            )
+            print(
+                f"Status: {status}"
+            )
+            print(
+                "Candidate version: "
+                f"v{candidate_version}"
+            )
+
+            if champion_version is not None:
+                print(
+                    "Champion version: "
+                    f"v{champion_version}"
+                )
+
+            if mae is not None:
+                print(
+                    f"MAE: {mae:.4f}"
+                )
+
+            if rmse is not None:
+                print(
+                    f"RMSE: {rmse:.4f}"
+                )
+
+            if (
+                baseline_improvement
+                is not None
+            ):
+                print(
+                    "Improvement vs "
+                    "persistence: "
+                    f"{baseline_improvement:+.2f}%"
+                )
+
+            if (
+                champion_improvement
+                is not None
+            ):
+                print(
+                    "Improvement vs "
+                    "champion: "
+                    f"{champion_improvement:+.2f}%"
+                )
+
+            print(
+                f"Reason: {reason}"
+            )
+
+        print()
         print(
-            "================================"
+            "========================================"
+        )
+        print(
+            "All configured horizons processed."
+        )
+        print(
+            "========================================"
         )
 
     ingestion_result = ingestion()
@@ -203,18 +318,18 @@ def traffic_training_pipeline():
         dataset_path
     )
 
-    training_result = train_model(
+    training_results = train_models(
         features_path
     )
 
-    promotion_result = quality_gate(
+    promotion_results = quality_gate(
         features_path,
-        training_result,
+        training_results,
     )
 
     notify(
-        training_result,
-        promotion_result,
+        training_results,
+        promotion_results,
     )
 
 
