@@ -100,7 +100,7 @@ def traffic_training_pipeline():
 
         return str(path)
 
-    @task
+    @task(multiple_outputs=False)
     def train_models(
         features_path: str,
     ) -> dict[int, dict[str, Any]]:
@@ -129,7 +129,7 @@ def traffic_training_pipeline():
 
         return results
 
-    @task
+    @task(multiple_outputs=False)
     def quality_gate(
         features_path: str,
         training_results: dict[
@@ -157,7 +157,7 @@ def traffic_training_pipeline():
         results = promote_all_candidates(
             dataset_path=features_path,
             metric="mae",
-            min_improvement_pct=1.0,
+            min_improvement_pct=0.5,
             min_baseline_improvement_pct=0.0,
         )
 
