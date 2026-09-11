@@ -254,6 +254,23 @@ services:
                 condition: service_started
 
 
+    # ==========================================================
+    # PROMETHEUS
+    # ==========================================================
+    prometheus:
+        image: prom/prometheus:latest
+        command:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+        ports:
+            - "9090:9090"
+        volumes:
+            - ./deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+            - prometheus_data:/prometheus
+        depends_on:
+            - api
+        restart: unless-stopped
+
 # ==============================================================
 # VOLUMES
 # ==============================================================
@@ -261,3 +278,4 @@ volumes:
     postgres_data:
     airflow_postgres_data:
     mlflow_artifacts:
+    prometheus_data:

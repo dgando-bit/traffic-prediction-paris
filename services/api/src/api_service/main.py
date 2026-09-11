@@ -1,8 +1,12 @@
 import uvicorn
+import time
+
 from fastapi import (
     FastAPI,
     HTTPException,
     Query,
+    Request,
+    Response
 )
 from sqlalchemy import text
 
@@ -26,6 +30,11 @@ from traffic_prediction.storage.repositories import (
     get_traffic_history_for_road,
 )
 
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from traffic_prediction.monitoring.metrics import (
+    HTTP_REQUEST_DURATION_SECONDS,
+    HTTP_REQUESTS_TOTAL,
+)
 
 app = FastAPI(
     title="Paris Traffic Prediction API",
@@ -36,6 +45,37 @@ app = FastAPI(
     ),
 )
 
+@app.middleware("http")
+async def prometheus_middleware(
+    request: Request,
+    call_next,
+) -> Response:
+    start_time = time.perf_counter()
+
+    response = await call_next(request)
+
+    duration = time.perf_counter() - start_time
+
+    route = request.scope.get("route")
+
+    path = (
+        getattr(route, "path", request.url.path)
+        if route is not None
+        else request.url.path
+    )
+
+    HTTP_REQUESTS_TOTAL.labels(
+        method=request.method,
+        path=path,
+        status_code=str(response.status_code),
+    ).inc()
+
+    HTTP_REQUEST_DURATION_SECONDS.labels(
+        method=request.method,
+        path=path,
+    ).observe(duration)
+
+    return response
 
 def validate_horizon(
     horizon_hours: int,
@@ -78,6 +118,15 @@ def prediction_to_response(
         model_version=prediction.model_version,
     )
 
+@app.get(
+    "/metrics",
+    include_in_schema=False,
+)
+def metrics() -> Response:
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST,
+    )
 
 @app.get(
     "/health",
