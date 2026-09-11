@@ -30,7 +30,87 @@ DATASET_PATH = Path(
     "data/processed/training_features.parquet"
 )
 
-EXPERIMENT_NAME = "traffic-prediction-multihorizon"
+EXPERIMENT_NAME = (
+    "traffic-prediction-multihorizon"
+)
+
+
+def get_last_training_dataset_max_timestamp() -> (
+    pd.Timestamp | None
+):
+    """
+    Return the maximum dataset timestamp used by the
+    latest successful +1h training run.
+
+    The +1h model is used as the reference because
+    every prediction horizon is trained from the same
+    dataset and the same temporal split.
+
+    Old MLflow runs may not contain the
+    dataset_max_timestamp parameter. They are skipped
+    automatically.
+    """
+    settings = get_settings()
+
+    mlflow.set_tracking_uri(
+        settings.mlflow_tracking_uri
+    )
+
+    client = MlflowClient()
+
+    experiment = (
+        client.get_experiment_by_name(
+            EXPERIMENT_NAME
+        )
+    )
+
+    if experiment is None:
+        return None
+
+    runs = client.search_runs(
+        experiment_ids=[
+            experiment.experiment_id
+        ],
+        filter_string=(
+            "params.horizon_hours = '1' "
+            "AND attributes.status = 'FINISHED'"
+        ),
+        order_by=[
+            "attributes.start_time DESC"
+        ],
+        max_results=100,
+    )
+
+    for run in runs:
+        raw_timestamp = (
+            run.data.params.get(
+                "dataset_max_timestamp"
+            )
+        )
+
+        if not raw_timestamp:
+            continue
+
+        timestamp = pd.Timestamp(
+            raw_timestamp
+        )
+
+        if timestamp.tzinfo is None:
+            timestamp = (
+                timestamp.tz_localize(
+                    "UTC"
+                )
+            )
+        else:
+            timestamp = (
+                timestamp.tz_convert(
+                    "UTC"
+                )
+            )
+
+        return timestamp
+
+    return None
 
 
 def _load_dataset(
@@ -38,11 +118,14 @@ def _load_dataset(
     *,
     target_columns: Iterable[str] | None = None,
 ) -> pd.DataFrame:
-    dataset_path = Path(dataset_path)
+    dataset_path = Path(
+        dataset_path
+    )
 
     if not dataset_path.exists():
         raise FileNotFoundError(
-            f"Training dataset not found: {dataset_path}"
+            "Training dataset not found: "
+            f"{dataset_path}"
         )
 
     df = pd.read_parquet(
@@ -50,7 +133,9 @@ def _load_dataset(
     )
 
     if target_columns is None:
-        target_columns = TARGET_COLUMNS.values()
+        target_columns = (
+            TARGET_COLUMNS.values()
+        )
 
     required_columns = {
         "timestamp_utc",
@@ -80,8 +165,10 @@ def _get_registered_model_version(
     registered_model_name: str,
     run_id: str,
 ) -> str:
-    versions = client.search_model_versions(
-        f"name='{registered_model_name}'"
+    versions = (
+        client.search_model_versions(
+            f"name='{registered_model_name}'"
+        )
     )
 
     matching_versions = [
@@ -119,6 +206,26 @@ def _get_registered_model_name(
     )
 
 
+def _normalize_timestamp(
+    value: pd.Timestamp,
+) -> pd.Timestamp:
+    """
+    Normalize a pandas timestamp to UTC.
+    """
+    timestamp = pd.Timestamp(
+        value
+    )
+
+    if timestamp.tzinfo is None:
+        return timestamp.tz_localize(
+            "UTC"
+        )
+
+    return timestamp.tz_convert(
+        "UTC"
+    )
+
+
 def _train_horizon(
     *,
     train_base_df: pd.DataFrame,
@@ -126,9 +233,14 @@ def _train_horizon(
     horizon_hours: int,
     base_registered_model_name: str,
     trained_model_alias: str,
+    dataset_min_timestamp: pd.Timestamp,
+    dataset_max_timestamp: pd.Timestamp,
+    dataset_rows: int,
 ) -> dict[str, Any]:
-    target_column = get_target_column(
-        horizon_hours
+    target_column = (
+        get_target_column(
+            horizon_hours
+        )
     )
 
     registered_model_name = (
@@ -142,14 +254,18 @@ def _train_horizon(
 
     train_df = (
         train_base_df.dropna(
-            subset=[target_column]
+            subset=[
+                target_column
+            ]
         )
         .copy()
     )
 
     test_df = (
         test_base_df.dropna(
-            subset=[target_column]
+            subset=[
+                target_column
+            ]
         )
         .copy()
     )
@@ -173,23 +289,23 @@ def _train_horizon(
         "=" * 60
     )
     print(
-        f"Training horizon: "
+        "Training horizon: "
         f"+{horizon_hours}h"
     )
     print(
-        f"Target column: "
+        "Target column: "
         f"{target_column}"
     )
     print(
-        f"Registered model: "
+        "Registered model: "
         f"{registered_model_name}"
     )
     print(
-        f"Train rows: "
+        "Train rows: "
         f"{len(train_df):,}"
     )
     print(
-        f"Test rows: "
+        "Test rows: "
         f"{len(test_df):,}"
     )
     print(
@@ -211,7 +327,9 @@ def _train_horizon(
             feature_columns=(
                 FEATURE_COLUMNS
             ),
-            target_column=target_column,
+            target_column=(
+                target_column
+            ),
         )
 
         predictions = model.predict(
@@ -251,6 +369,15 @@ def _train_horizon(
                 "test_rows": len(
                     test_df
                 ),
+                "dataset_rows": (
+                    dataset_rows
+                ),
+                "dataset_min_timestamp": (
+                    dataset_min_timestamp.isoformat()
+                ),
+                "dataset_max_timestamp": (
+                    dataset_max_timestamp.isoformat()
+                ),
             }
         )
 
@@ -279,6 +406,17 @@ def _train_horizon(
                 "horizon_hours": (
                     horizon_hours
                 ),
+                "dataset": {
+                    "rows": (
+                        dataset_rows
+                    ),
+                    "min_timestamp": (
+                        dataset_min_timestamp.isoformat()
+                    ),
+                    "max_timestamp": (
+                        dataset_max_timestamp.isoformat()
+                    ),
+                },
             },
             "features.json",
         )
@@ -369,6 +507,15 @@ def _train_horizon(
         "test_rows": len(
             test_df
         ),
+        "dataset_rows": (
+            dataset_rows
+        ),
+        "dataset_min_timestamp": (
+            dataset_min_timestamp.isoformat()
+        ),
+        "dataset_max_timestamp": (
+            dataset_max_timestamp.isoformat()
+        ),
     }
 
 
@@ -438,9 +585,40 @@ def train_and_register_model(
         ],
     )
 
+    dataset_rows = len(
+        df
+    )
+
+    dataset_min_timestamp = (
+        _normalize_timestamp(
+            pd.Timestamp(
+                df[
+                    "timestamp_utc"
+                ].min()
+            )
+        )
+    )
+
+    dataset_max_timestamp = (
+        _normalize_timestamp(
+            pd.Timestamp(
+                df[
+                    "timestamp_utc"
+                ].max()
+            )
+        )
+    )
+
     print(
         "Dataset rows:",
-        f"{len(df):,}",
+        f"{dataset_rows:,}",
+    )
+
+    print(
+        "Dataset period:",
+        dataset_min_timestamp,
+        "->",
+        dataset_max_timestamp,
     )
 
     train_base_df, test_base_df = (
@@ -487,6 +665,15 @@ def train_and_register_model(
         ),
         trained_model_alias=(
             trained_model_alias
+        ),
+        dataset_min_timestamp=(
+            dataset_min_timestamp
+        ),
+        dataset_max_timestamp=(
+            dataset_max_timestamp
+        ),
+        dataset_rows=(
+            dataset_rows
         ),
     )
 
@@ -541,9 +728,40 @@ def train_and_register_all_horizons(
         dataset_path,
     )
 
+    dataset_rows = len(
+        df
+    )
+
+    dataset_min_timestamp = (
+        _normalize_timestamp(
+            pd.Timestamp(
+                df[
+                    "timestamp_utc"
+                ].min()
+            )
+        )
+    )
+
+    dataset_max_timestamp = (
+        _normalize_timestamp(
+            pd.Timestamp(
+                df[
+                    "timestamp_utc"
+                ].max()
+            )
+        )
+    )
+
     print(
         "Dataset rows:",
-        f"{len(df):,}",
+        f"{dataset_rows:,}",
+    )
+
+    print(
+        "Dataset period:",
+        dataset_min_timestamp,
+        "->",
+        dataset_max_timestamp,
     )
 
     #
@@ -623,6 +841,15 @@ def train_and_register_all_horizons(
             ),
             trained_model_alias=(
                 trained_model_alias
+            ),
+            dataset_min_timestamp=(
+                dataset_min_timestamp
+            ),
+            dataset_max_timestamp=(
+                dataset_max_timestamp
+            ),
+            dataset_rows=(
+                dataset_rows
             ),
         )
 
