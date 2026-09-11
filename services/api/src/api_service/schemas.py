@@ -11,6 +11,7 @@ class PredictionResponse(BaseModel):
     iu_ac: str
     prediction_timestamp_utc: datetime
     target_timestamp_utc: datetime
+    horizon_hours: int
     predicted_k: float
     model_version: str
 
@@ -22,6 +23,7 @@ class RoadResponse(BaseModel):
     longitude: float
     road_length_m: float | None
     geo_shape: str | None
+
 
 class TrafficObservationResponse(BaseModel):
     timestamp_utc: datetime

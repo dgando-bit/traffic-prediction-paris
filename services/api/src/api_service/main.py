@@ -13,6 +13,9 @@ from api_service.schemas import (
     RoadResponse,
     TrafficObservationResponse,
 )
+from traffic_prediction.features.schema import (
+    PREDICTION_HORIZONS,
+)
 from traffic_prediction.storage.database import (
     get_db_session,
 )
@@ -26,12 +29,54 @@ from traffic_prediction.storage.repositories import (
 
 app = FastAPI(
     title="Paris Traffic Prediction API",
-    version="0.2.0",
+    version="0.3.0",
     description=(
-        "API exposing one-hour-ahead traffic "
+        "API exposing multi-horizon traffic "
         "predictions for Paris road segments."
     ),
 )
+
+
+def validate_horizon(
+    horizon_hours: int,
+) -> int:
+    """
+    Validate that a prediction horizon is supported.
+    """
+    if horizon_hours not in PREDICTION_HORIZONS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Unsupported prediction horizon. "
+                f"Allowed values: "
+                f"{PREDICTION_HORIZONS}"
+            ),
+        )
+
+    return horizon_hours
+
+
+def prediction_to_response(
+    prediction,
+) -> PredictionResponse:
+    """
+    Convert a Prediction ORM object into
+    the API response schema.
+    """
+    return PredictionResponse(
+        iu_ac=prediction.iu_ac,
+        prediction_timestamp_utc=(
+            prediction.prediction_timestamp_utc
+        ),
+        target_timestamp_utc=(
+            prediction.target_timestamp_utc
+        ),
+        horizon_hours=(
+            prediction.horizon_hours
+        ),
+        predicted_k=prediction.predicted_k,
+        model_version=prediction.model_version,
+    )
 
 
 @app.get(
@@ -84,35 +129,41 @@ def roads() -> list[RoadResponse]:
             for road in road_segments
         ]
 
+
 @app.get(
     "/predictions/latest",
     response_model=list[PredictionResponse],
     tags=["predictions"],
 )
-def latest_predictions() -> list[PredictionResponse]:
+def latest_predictions(
+    horizon_hours: int = Query(
+        default=1,
+        description=(
+            "Prediction horizon in hours."
+        ),
+    ),
+) -> list[PredictionResponse]:
     """
-    Return the most recent prediction available
-    for every road segment.
+    Return the latest prediction batch for
+    the requested prediction horizon.
     """
+    horizon_hours = validate_horizon(
+        horizon_hours
+    )
+
     with get_db_session() as session:
         predictions = get_latest_predictions(
-            session
+            session,
+            horizon_hours=horizon_hours,
         )
 
         return [
-            PredictionResponse(
-                iu_ac=row.iu_ac,
-                prediction_timestamp_utc=(
-                    row.prediction_timestamp_utc
-                ),
-                target_timestamp_utc=(
-                    row.target_timestamp_utc
-                ),
-                predicted_k=row.predicted_k,
-                model_version=row.model_version,
+            prediction_to_response(
+                prediction
             )
-            for row in predictions
+            for prediction in predictions
         ]
+
 
 @app.get(
     "/roads/{iu_ac}/history",
@@ -126,11 +177,22 @@ def road_history(
         ge=1,
         le=168,
     ),
+    horizon_hours: int = Query(
+        default=1,
+        description=(
+            "Prediction horizon in hours."
+        ),
+    ),
 ) -> RoadHistoryResponse:
     """
     Return recent traffic observations for one
-    road and its latest one-hour-ahead prediction.
+    road and its latest prediction for the
+    requested horizon.
     """
+    horizon_hours = validate_horizon(
+        horizon_hours
+    )
+
     with get_db_session() as session:
         observations = (
             get_traffic_history_for_road(
@@ -153,26 +215,13 @@ def road_history(
             get_latest_prediction_for_road(
                 session,
                 iu_ac,
+                horizon_hours=horizon_hours,
             )
         )
 
         prediction_response = (
-            PredictionResponse(
-                iu_ac=prediction.iu_ac,
-                prediction_timestamp_utc=(
-                    prediction
-                    .prediction_timestamp_utc
-                ),
-                target_timestamp_utc=(
-                    prediction
-                    .target_timestamp_utc
-                ),
-                predicted_k=(
-                    prediction.predicted_k
-                ),
-                model_version=(
-                    prediction.model_version
-                ),
+            prediction_to_response(
+                prediction
             )
             if prediction is not None
             else None
@@ -193,6 +242,7 @@ def road_history(
             prediction=prediction_response,
         )
 
+
 @app.get(
     "/predictions/{iu_ac}",
     response_model=PredictionResponse,
@@ -200,15 +250,27 @@ def road_history(
 )
 def latest_prediction(
     iu_ac: str,
+    horizon_hours: int = Query(
+        default=1,
+        description=(
+            "Prediction horizon in hours."
+        ),
+    ),
 ) -> PredictionResponse:
     """
-    Return the latest prediction for one road.
+    Return the latest prediction for one road
+    and one prediction horizon.
     """
+    horizon_hours = validate_horizon(
+        horizon_hours
+    )
+
     with get_db_session() as session:
         prediction = (
             get_latest_prediction_for_road(
                 session,
                 iu_ac,
+                horizon_hours=horizon_hours,
             )
         )
 
@@ -216,21 +278,14 @@ def latest_prediction(
             raise HTTPException(
                 status_code=404,
                 detail=(
-                    f"No prediction found "
+                    f"No +{horizon_hours}h "
+                    f"prediction found "
                     f"for road {iu_ac}"
                 ),
             )
 
-        return PredictionResponse(
-            iu_ac=prediction.iu_ac,
-            prediction_timestamp_utc=(
-                prediction.prediction_timestamp_utc
-            ),
-            target_timestamp_utc=(
-                prediction.target_timestamp_utc
-            ),
-            predicted_k=prediction.predicted_k,
-            model_version=prediction.model_version,
+        return prediction_to_response(
+            prediction
         )
 
 
