@@ -225,15 +225,32 @@ def get_latest_predictions(
     if latest_prediction_timestamp is None:
         return []
 
-    statement = (
-        select(Prediction)
-        .where(
-            Prediction.prediction_timestamp_utc
-            == latest_prediction_timestamp
+    latest_ids = (
+        select(
+            Prediction.id
         )
         .where(
             Prediction.horizon_hours
-            == horizon_hours
+            == horizon_hours,
+            Prediction.prediction_timestamp_utc
+            == latest_prediction_timestamp,
+        )
+        .distinct(
+            Prediction.iu_ac
+        )
+        .order_by(
+            Prediction.iu_ac,
+            Prediction.id.desc(),
+        )
+        .subquery()
+    )
+
+    statement = (
+        select(Prediction)
+        .where(
+            Prediction.id.in_(
+                select(latest_ids.c.id)
+            )
         )
         .order_by(
             Prediction.iu_ac
@@ -253,14 +270,13 @@ def get_latest_prediction_for_road(
     statement = (
         select(Prediction)
         .where(
-            Prediction.iu_ac == iu_ac
-        )
-        .where(
+            Prediction.iu_ac == iu_ac,
             Prediction.horizon_hours
-            == horizon_hours
+            == horizon_hours,
         )
         .order_by(
-            Prediction.prediction_timestamp_utc.desc()
+            Prediction.prediction_timestamp_utc.desc(),
+            Prediction.id.desc(),
         )
         .limit(1)
     )
