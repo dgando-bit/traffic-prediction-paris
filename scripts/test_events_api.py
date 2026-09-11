@@ -1,6 +1,5 @@
 import httpx
 
-
 EVENTS_API_URL = (
     "https://opendata.paris.fr/api/explore/v2.1/catalog/"
     "datasets/que-faire-a-paris-/records"

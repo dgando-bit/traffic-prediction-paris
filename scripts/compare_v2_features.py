@@ -5,7 +5,6 @@ from sklearn.metrics import (
     mean_absolute_error,
     mean_squared_error,
 )
-
 from traffic_prediction.features.calendar_features import (
     add_public_holiday_features,
     add_school_holiday_features,
@@ -16,7 +15,6 @@ from traffic_prediction.features.event_features import (
 from traffic_prediction.models.lightgbm import (
     train_lightgbm,
 )
-
 
 DATASET_PATH = Path(
     "data/processed/ml_dataset_multi_20_long.parquet"

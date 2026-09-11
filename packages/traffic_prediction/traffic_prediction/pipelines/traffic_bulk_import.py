@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import pandas as pd
 import pyarrow.parquet as pq
@@ -13,7 +13,6 @@ from traffic_prediction.storage.repositories import (
     get_all_road_ids,
     upsert_traffic_dataframe,
 )
-
 
 DEFAULT_BULK_DIR = Path(
     "data/raw/traffic/bulk"

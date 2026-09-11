@@ -7,10 +7,8 @@ from typing import Any
 
 import httpx
 import pandas as pd
-
 from shared.config import get_settings
 from shared.logging import get_logger
-
 
 settings = get_settings()
 logger = get_logger(__name__)

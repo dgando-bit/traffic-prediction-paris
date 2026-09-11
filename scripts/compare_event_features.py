@@ -5,14 +5,12 @@ from sklearn.metrics import (
     mean_absolute_error,
     mean_squared_error,
 )
-
 from traffic_prediction.features.event_features import (
     add_event_features,
 )
 from traffic_prediction.models.lightgbm import (
     train_lightgbm,
 )
-
 
 TRAFFIC_PATH = Path(
     "data/processed/ml_dataset_multi_20_long.parquet"

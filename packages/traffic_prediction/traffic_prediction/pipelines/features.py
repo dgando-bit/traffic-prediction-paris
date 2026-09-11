@@ -23,7 +23,6 @@ from traffic_prediction.processing.cleaning import (
     clean_traffic_data,
 )
 
-
 DEFAULT_INPUT_PATH = Path(
     "data/interim/traffic_training.parquet"
 )

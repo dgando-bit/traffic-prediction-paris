@@ -1,14 +1,12 @@
 from pathlib import Path
 
 import pandas as pd
-
 from traffic_prediction.storage.database import (
     get_db_session,
 )
 from traffic_prediction.storage.repositories import (
     upsert_traffic_dataframe,
 )
-
 
 INPUT_PATH = Path(
     "data/interim/traffic_multi_20_long_clean.parquet"

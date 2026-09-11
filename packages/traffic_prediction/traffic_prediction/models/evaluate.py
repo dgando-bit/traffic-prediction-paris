@@ -3,13 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+from shared.logging import get_logger
 from sklearn.metrics import (
     mean_absolute_error,
     mean_squared_error,
 )
-
-from shared.logging import get_logger
-
 
 logger = get_logger(__name__)
 

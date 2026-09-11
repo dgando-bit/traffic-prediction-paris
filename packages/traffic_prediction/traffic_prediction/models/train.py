@@ -3,14 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pandas as pd
+from shared.logging import get_logger
 from sklearn.ensemble import HistGradientBoostingRegressor
 
-from shared.logging import get_logger
 from traffic_prediction.features.ml_dataset import (
     FEATURE_COLUMNS,
     TARGET_COLUMN,
 )
-
 
 logger = get_logger(__name__)
 

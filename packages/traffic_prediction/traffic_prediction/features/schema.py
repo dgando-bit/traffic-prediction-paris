@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 PREDICTION_HORIZONS = (
     1,
     2,

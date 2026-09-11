@@ -1,10 +1,8 @@
 import pandas as pd
-
 from traffic_prediction.models.baseline import (
     evaluate_persistence_baseline,
     temporal_train_test_split,
 )
-
 
 INPUT_PATH = (
     "data/processed/ml_dataset_4836.parquet"

@@ -1,9 +1,7 @@
 import pandas as pd
-
 from traffic_prediction.ingestion.traffic import (
     ingest_traffic_data,
 )
-
 
 OUTPUT_PATH = "data/raw/traffic/traffic_4836.parquet"
 

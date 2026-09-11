@@ -1,5 +1,4 @@
 import pandas as pd
-
 from traffic_prediction.ingestion.events import (
     fetch_events,
 )

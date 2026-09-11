@@ -3,12 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from shared.logging import get_logger
+
 from traffic_prediction.processing.cleaning import clean_traffic_data
 from traffic_prediction.storage.database import get_db_session
 from traffic_prediction.storage.repositories import (
     get_recent_traffic_dataframe,
 )
-
 
 logger = get_logger(__name__)
 

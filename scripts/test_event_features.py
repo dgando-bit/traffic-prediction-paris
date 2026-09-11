@@ -1,11 +1,9 @@
 from pathlib import Path
 
 import pandas as pd
-
 from traffic_prediction.features.event_features import (
     add_event_features,
 )
-
 
 TRAFFIC_PATH = Path(
     "data/processed/ml_dataset_multi_20_long.parquet"

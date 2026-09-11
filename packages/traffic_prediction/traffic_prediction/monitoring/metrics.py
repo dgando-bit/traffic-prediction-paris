@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from prometheus_client import Counter, Gauge, Histogram
 from sqlalchemy.orm import Session
@@ -10,7 +10,6 @@ from traffic_prediction.storage.repositories import (
     get_latest_predictions,
     get_latest_traffic_timestamp,
 )
-
 
 # ---------------------------------------------------------------------------
 # HTTP API metrics
@@ -113,9 +112,9 @@ CHAMPION_MODEL_VERSION = Gauge(
 
 def _ensure_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value.replace(tzinfo=UTC)
 
-    return value.astimezone(timezone.utc)
+    return value.astimezone(UTC)
 
 
 def refresh_business_metrics(
@@ -128,7 +127,7 @@ def refresh_business_metrics(
     This function is intended to be called when Prometheus scrapes
     the API /metrics endpoint.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # ------------------------------------------------------------------
     # Traffic observations

@@ -10,7 +10,6 @@ from traffic_prediction.selection.roads import (
     select_eligible_roads,
 )
 
-
 OUTPUT_PATH = Path(
     "data/raw/reference/road_reference.parquet"
 )

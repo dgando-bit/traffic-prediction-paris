@@ -1,5 +1,4 @@
 import pandas as pd
-
 from traffic_prediction.features.ml_dataset import (
     TARGET_COLUMN,
 )
@@ -13,7 +12,6 @@ from traffic_prediction.models.evaluate import (
 from traffic_prediction.models.train import (
     train_hist_gradient_boosting,
 )
-
 
 INPUT_PATH = (
     "data/processed/ml_dataset_multi_20_long.parquet"

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from traffic_prediction.ingestion.traffic import fetch_traffic_page
 import pandas as pd
 
+from traffic_prediction.ingestion.traffic import fetch_traffic_page
 
 DEFAULT_MIN_OBSERVATIONS = 24 * 90
 DEFAULT_MIN_VALID_RATIO = 0.95

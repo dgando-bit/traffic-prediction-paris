@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import mlflow
 import mlflow.lightgbm
 import pandas as pd
 from mlflow import MlflowClient
-
 from shared.config import get_settings
+
 from traffic_prediction.features.schema import (
     FEATURE_COLUMNS,
     PREDICTION_HORIZONS,
@@ -24,7 +25,6 @@ from traffic_prediction.models.evaluate import (
 from traffic_prediction.models.lightgbm import (
     train_lightgbm,
 )
-
 
 DATASET_PATH = Path(
     "data/processed/training_features.parquet"

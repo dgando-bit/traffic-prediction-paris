@@ -4,7 +4,6 @@ from traffic_prediction.ingestion.weather import (
     ingest_historical_weather,
 )
 
-
 OUTPUT_PATH = Path(
     "data/raw/weather/weather_paris_historical.parquet"
 )

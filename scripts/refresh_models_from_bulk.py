@@ -19,7 +19,6 @@ from traffic_prediction.pipelines.training import (
     train_and_register_all_horizons,
 )
 
-
 INBOX_DIR = Path(
     "data/raw/traffic/bulk/inbox"
 )

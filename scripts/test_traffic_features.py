@@ -1,6 +1,6 @@
-import pandas as pd
 from pathlib import Path
 
+import pandas as pd
 from traffic_prediction.features.build_features import (
     build_traffic_features,
 )

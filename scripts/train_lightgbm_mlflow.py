@@ -3,14 +3,12 @@ from pathlib import Path
 import mlflow
 import mlflow.lightgbm
 import pandas as pd
-
 from traffic_prediction.models.baseline import (
     evaluate_persistence_baseline,
     temporal_train_test_split,
 )
 from traffic_prediction.models.evaluate import evaluate_regression
 from traffic_prediction.models.lightgbm import train_lightgbm
-
 
 INPUT_PATH = Path(
     "data/processed/ml_dataset_multi_20_long.parquet"

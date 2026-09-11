@@ -6,8 +6,8 @@ import mlflow
 import mlflow.lightgbm
 import pandas as pd
 from mlflow import MlflowClient
-
 from shared.config import get_settings
+
 from traffic_prediction.features.road_features import (
     add_road_features,
 )
@@ -31,7 +31,6 @@ from traffic_prediction.storage.repositories import (
     get_recent_traffic_dataframe,
     insert_predictions,
 )
-
 
 settings = get_settings()
 

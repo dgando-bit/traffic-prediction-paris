@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
-
+import pendulum
 from airflow.sdk import dag, task
-
 from traffic_prediction.inference.predictor import run_predictions
 from traffic_prediction.pipelines.traffic_ingestion import (
     run_incremental_ingestion,
@@ -14,7 +12,12 @@ from traffic_prediction.pipelines.traffic_ingestion import (
     dag_id="traffic_prediction_inference",
     description="Hourly inference pipeline for Paris traffic prediction",
     schedule="0 * * * *",
-    start_date=datetime(2026, 1, 1),
+    start_date=pendulum.datetime(
+        2026,
+        1,
+        1,
+        tz="Europe/Paris",
+    ),
     catchup=False,
     max_active_runs=1,
     tags=[

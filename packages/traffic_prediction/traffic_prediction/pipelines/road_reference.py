@@ -1,13 +1,13 @@
 from __future__ import annotations
-import pandas as pd
 
 from pathlib import Path
 
+import pandas as pd
+from sqlalchemy import delete
 
 from traffic_prediction.storage.database import get_db_session
-from traffic_prediction.storage.repositories import upsert_road_segments
 from traffic_prediction.storage.models import RoadSegment
-from sqlalchemy import delete
+from traffic_prediction.storage.repositories import upsert_road_segments
 
 DEFAULT_REFERENCE_PATH = Path(
     "data/raw/reference/road_reference.parquet"

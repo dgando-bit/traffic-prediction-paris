@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import httpx
 import pandas as pd
-
 from shared.logging import get_logger
-
 
 logger = get_logger(__name__)
 

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from datetime import timedelta, date
+from datetime import date, timedelta
 
 import holidays
 import pandas as pd
-
 from shared.logging import get_logger
-
 
 logger = get_logger(__name__)
 

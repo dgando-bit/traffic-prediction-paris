@@ -1,24 +1,16 @@
-import uvicorn
 import time
 
-from fastapi import (
-    FastAPI,
-    HTTPException,
-    Query,
-    Request,
-    Response
-)
+import uvicorn
+from fastapi import FastAPI, HTTPException, Query, Request, Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import text
-
-from api_service.schemas import (
-    HealthResponse,
-    PredictionResponse,
-    RoadHistoryResponse,
-    RoadResponse,
-    TrafficObservationResponse,
-)
 from traffic_prediction.features.schema import (
     PREDICTION_HORIZONS,
+)
+from traffic_prediction.monitoring.metrics import (
+    HTTP_REQUEST_DURATION_SECONDS,
+    HTTP_REQUESTS_TOTAL,
+    refresh_business_metrics,
 )
 from traffic_prediction.storage.database import (
     get_db_session,
@@ -30,11 +22,12 @@ from traffic_prediction.storage.repositories import (
     get_traffic_history_for_road,
 )
 
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-from traffic_prediction.monitoring.metrics import (
-    HTTP_REQUEST_DURATION_SECONDS,
-    HTTP_REQUESTS_TOTAL,
-    refresh_business_metrics,
+from api_service.schemas import (
+    HealthResponse,
+    PredictionResponse,
+    RoadHistoryResponse,
+    RoadResponse,
+    TrafficObservationResponse,
 )
 
 app = FastAPI(

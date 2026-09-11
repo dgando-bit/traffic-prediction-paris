@@ -1,14 +1,12 @@
 from pathlib import Path
 
 import pandas as pd
-
 from traffic_prediction.features.build_features import (
     build_traffic_features,
 )
 from traffic_prediction.features.ml_dataset import (
     build_ml_dataset,
 )
-
 
 INPUT_PATH = Path(
     "data/interim/traffic_multi_20_long_clean.parquet"

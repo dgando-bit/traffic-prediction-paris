@@ -1,11 +1,12 @@
+import pandas as pd
+from traffic_prediction.features.road_features import (
+    add_road_features,
+)
 from traffic_prediction.features.time_features import (
     add_time_features,
 )
 from traffic_prediction.features.traffic_features import (
     add_traffic_lag_features,
-)
-from traffic_prediction.features.road_features import (
-    add_road_features,
 )
 from traffic_prediction.storage.database import (
     get_db_session,
@@ -13,9 +14,6 @@ from traffic_prediction.storage.database import (
 from traffic_prediction.storage.repositories import (
     get_recent_traffic_dataframe,
 )
-
-import pandas as pd
-
 
 ROAD_REFERENCE_PATH = (
     "data/raw/reference/road_reference.parquet"

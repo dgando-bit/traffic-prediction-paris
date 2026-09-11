@@ -1,12 +1,10 @@
 from pathlib import Path
 
 import pandas as pd
-
 from traffic_prediction.ingestion.traffic import (
     fetch_traffic_data,
     normalize_traffic_data,
 )
-
 
 ROAD_IDS = [
     "4632",

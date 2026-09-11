@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
-
 from traffic_prediction.models.baseline import (
     evaluate_persistence_baseline,
     temporal_train_test_split,
@@ -10,7 +9,6 @@ from traffic_prediction.models.baseline import (
 from traffic_prediction.models.evaluate import (
     evaluate_regression,
 )
-
 
 INPUT_PATH = Path(
     "data/processed/ml_dataset_multi_20_long.parquet"

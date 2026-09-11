@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pandas as pd
-
 from traffic_prediction.models.baseline import (
     temporal_train_test_split,
 )
@@ -11,7 +10,6 @@ from traffic_prediction.models.evaluate import (
 from traffic_prediction.models.lightgbm import (
     train_lightgbm,
 )
-
 
 DATASET_PATH = Path(
     "data/processed/ml_dataset_multi_20_long.parquet"

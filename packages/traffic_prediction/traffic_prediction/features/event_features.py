@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
 from shared.logging import get_logger
-
 
 logger = get_logger(__name__)
 

@@ -1,9 +1,7 @@
 import pandas as pd
-
 from traffic_prediction.processing.cleaning import (
     process_traffic_file,
 )
-
 
 input_path = "data/raw/traffic/traffic_sample.parquet"
 output_path = "data/interim/traffic_clean.parquet"

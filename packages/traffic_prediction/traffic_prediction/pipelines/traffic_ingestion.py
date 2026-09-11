@@ -18,7 +18,6 @@ from traffic_prediction.storage.repositories import (
     upsert_traffic_dataframe,
 )
 
-
 DEFAULT_OUTPUT_PATH = Path(
     "data/raw/traffic/traffic_latest.parquet"
 )

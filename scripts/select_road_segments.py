@@ -1,7 +1,5 @@
 import httpx
-
 from shared.config import get_settings
-
 
 N_ROADS = 20
 MIN_K_COVERAGE = 0.90

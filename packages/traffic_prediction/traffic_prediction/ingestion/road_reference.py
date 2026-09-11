@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
-from collections.abc import Sequence
 
 import httpx
 import pandas as pd
-
 from shared.logging import get_logger
-
 
 logger = get_logger(__name__)
 
@@ -103,8 +101,9 @@ def _compute_linestring_length_m(
     total_length = 0.0
 
     for start, end in zip(
-        coordinates[:-1],
-        coordinates[1:],
+            coordinates[:-1],
+            coordinates[1:],
+            strict=True,
     ):
         lon1, lat1 = start
         lon2, lat2 = end

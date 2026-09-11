@@ -8,8 +8,8 @@ import mlflow.lightgbm
 import pandas as pd
 from mlflow import MlflowClient
 from mlflow.exceptions import MlflowException
-
 from shared.config import get_settings
+
 from traffic_prediction.features.schema import (
     FEATURE_COLUMNS,
     PREDICTION_HORIZONS,
@@ -21,7 +21,6 @@ from traffic_prediction.models.baseline import (
 from traffic_prediction.models.evaluate import (
     evaluate_regression,
 )
-
 
 DEFAULT_DATASET_PATH = Path(
     "data/processed/training_features.parquet"

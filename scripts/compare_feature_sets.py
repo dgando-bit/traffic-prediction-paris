@@ -1,14 +1,11 @@
 from pathlib import Path
 
 import pandas as pd
-
 from traffic_prediction.models.baseline import (
     evaluate_persistence_baseline,
     temporal_train_test_split,
 )
 from traffic_prediction.models.evaluate import evaluate_regression
-from traffic_prediction.models.train import train_hist_gradient_boosting
-
 
 INPUT_PATH = Path(
     "data/processed/ml_dataset_multi_20_long.parquet"

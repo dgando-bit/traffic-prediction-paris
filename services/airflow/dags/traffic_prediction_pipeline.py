@@ -9,7 +9,6 @@ from airflow.exceptions import (
     AirflowSkipException,
 )
 from airflow.sdk import dag, task
-
 from traffic_prediction.pipelines.dataset import (
     make_training_dataset,
 )
@@ -32,7 +31,6 @@ from traffic_prediction.storage.database import (
 from traffic_prediction.storage.repositories import (
     get_latest_traffic_timestamp,
 )
-
 
 TRAINING_HISTORY_HOURS = 24 * 90
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-
 from datetime import datetime, timedelta
 
+import pandas as pd
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -13,7 +13,6 @@ from traffic_prediction.storage.models import (
     RoadSegment,
     TrafficObservation,
 )
-import pandas as pd
 
 
 def upsert_traffic_observations(
